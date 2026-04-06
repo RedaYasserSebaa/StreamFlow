@@ -37,7 +37,7 @@ If you are a developer and wish to run the app from source, modify the code, or 
 
 1. **Clone the project**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/RedaYasserSebaa/StreamFlow
    cd stream-flow
    ```
 2. **Install NodeJS dependencies**
