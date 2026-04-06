@@ -1,0 +1,71 @@
+<p align="center">
+  <img src="assets/favicon.png" alt="Stream Flow Icon" width="100" />
+</p>
+
+# Stream Flow
+
+Welcome to **Stream Flow**, a standalone application that integrates movie and TV show discovery with automated torrent searching and **direct browser-based media streaming**. This app bypasses the need for manual downloads and provides an UI for your own torrent streams!
+
+> [!WARNING]
+> **Under Development:** Stream Flow is currently in active development. You may encounter bugs, performance issues, or incomplete features. Your feedback and contributions are highly appreciated!
+
+---
+
+## 🚀 How to Install and Use
+
+1. **Download the Installer:** Go to the **Releases** tab on this GitHub repository and download the latest `StreamFlow Setup .exe` file.
+2. **Install:** Double click the `.exe` file to install the application.
+3. **Run Stream Flow:** Once installed, Stream Flow runs as a lightweight background server (accessible via your Windows system tray) and will automatically open the beautiful streaming UI in your default web browser.
+
+### Initial Setup Requirements
+When you first launch the app, you will be directed to a setup page that requires two external services:
+
+1. **TMDB API Key (For Posters & Metadata)**: 
+   - Create a free account at [themoviedb.org](https://www.themoviedb.org/).
+   - Go to Account Settings > API, and copy your Developer API Key.
+2. **Jackett (For Torrent Scraping)**: 
+   - Jackett works as a proxy to search across multiple torrent sites simultaneously.
+   - Download and install Jackett from their [GitHub Releases](https://github.com/Jackett/Jackett/releases).
+   - Add your preferred torrent indexers in the Jackett dashboard.
+   - Copy your Jackett API key and port (default is `9117`) and enter them into the Stream Flow setup page.
+
+---
+
+## 🛠️ Local Development 
+
+If you are a developer and wish to run the app from source, modify the code, or build the installer yourself:
+
+1. **Clone the project**
+   ```bash
+   git clone <your-repo-url>
+   cd stream-flow
+   ```
+2. **Install NodeJS dependencies**
+   ```bash
+   npm install
+   ```
+3. **Start the application**
+   ```bash
+   npm start
+   ```
+4. **Build the Standalone Windows Installer yourself**
+   ```bash
+   npm run build
+   ```
+   *The built `.exe` will be saved to the `dist-installer/` directory.*
+
+---
+
+## 📋 To Do / Roadmap
+
+There are massive plans for the future of Stream Flow. Upcoming milestones include:
+- [ ] Create Docker image
+- [ ] Create macOS and Linux versions
+- [ ] Add Subtitle Provider integration directly in the player
+- [ ] Create Android TV app version
+
+---
+
+## License
+
+This project is licensed under the MIT License.

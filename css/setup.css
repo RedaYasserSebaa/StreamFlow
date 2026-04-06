@@ -1,0 +1,277 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.setup-container {
+    background: #1e293b;
+    border-radius: 20px;
+    padding: 50px 40px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    border: 1px solid #334155;
+}
+
+.setup-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.setup-header .logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 15px;
+    width: 60px;
+    height: 60px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.setup-header .logo-img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    display: block;
+}
+
+.setup-header h1 {
+    color: #f8fafc;
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.setup-header p {
+    color: #94a3b8;
+    font-size: 16px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    color: #f8fafc;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-group label i {
+    color: #3b82f6;
+    font-size: 16px;
+}
+
+.form-group .hint {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 4px;
+    margin-left: 24px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    color: #f8fafc;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    outline: none;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group input::placeholder {
+    color: #475569;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.section-title {
+    color: #3b82f6;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+}
+
+.section-title i {
+    font-size: 18px;
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 40px;
+}
+
+.btn-submit {
+    flex: 1;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 50px;
+}
+
+.btn-submit:hover {
+    opacity: 0.9;
+}
+
+.btn-submit:active {
+    transform: scale(0.98);
+}
+
+.btn-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-test {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    white-space: nowrap;
+    min-height: 42px;
+}
+
+.btn-test:hover {
+    background: rgba(59, 130, 246, 0.25);
+}
+
+.test-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.status-message {
+    padding: 12px 15px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 8px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-message.show {
+    display: flex;
+}
+
+.status-message.success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.status-message.error {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.status-message.info {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.status-message i {
+    font-size: 14px;
+}
+
+.advanced-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #94a3b8;
+    cursor: pointer;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.advanced-toggle i {
+    transition: transform 0.3s;
+}
+
+.advanced-toggle.active i {
+    transform: rotate(90deg);
+}
+
+.advanced-section {
+    display: none;
+}
+
+.advanced-section.show {
+    display: block;
+}
+
+@media (max-width: 600px) {
+    .setup-container {
+        padding: 30px 20px;
+    }
+
+    .setup-header h1 {
+        font-size: 24px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    .btn-submit {
+        width: 100%;
+    }
+}

@@ -1,0 +1,18 @@
+node_modules/
+
+# Build artifacts and installers
+dist/
+dist-installer/
+build_installer.js
+
+# Electron / Packaging cache
+.builder-cache/
+winCodeSign.7z
+*.7z
+
+# Environment and secrets
+.env
+config.json
+
+# Tool caches
+.aider.tags.cache.v4

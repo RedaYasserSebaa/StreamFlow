@@ -1,0 +1,7 @@
+{
+  "tmdb_api_key": "your_tmdb_api_key_here",
+  "jackett_api_key": "your_jackett_api_key_here",
+  "jackett_ip": "localhost",
+  "jackett_port": "9117",
+  "backend_url": "http://localhost:3001"
+}

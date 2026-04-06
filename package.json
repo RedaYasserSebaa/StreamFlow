@@ -1,0 +1,45 @@
+{
+  "name": "movie-downloader",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "build": {
+    "appId": "com.streamflow.app",
+    "productName": "StreamFlow",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "uninstallDisplayName": "StreamFlow"
+    },
+    "directories": {
+      "output": "dist-installer"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "got": "^14.6.6",
+    "qbittorrent": "^1.0.0",
+    "torrent-stream": "^1.2.1"
+  },
+  "devDependencies": {
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
+    "electron-packager": "^17.1.2",
+    "electron-winstaller": "^5.4.0",
+    "png-to-ico": "^3.0.1"
+  }
+}
