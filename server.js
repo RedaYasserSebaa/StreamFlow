@@ -25,19 +25,19 @@ try {
   if (fs.existsSync(CONFIG_FILE)) {
     const savedConfig = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
     CONFIG = { ...CONFIG, ...savedConfig };
-    console.log("📁 Loaded configuration from file");
+    console.log("Loaded configuration from file");
   }
 } catch (error) {
-  console.log("⚠️  Could not load config file, using defaults");
+  console.log("Could not load config file, using defaults");
 }
 
 // Save configuration function
 function saveConfig() {
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(CONFIG, null, 2));
-    console.log("💾 Configuration saved");
+    console.log("Configuration saved");
   } catch (error) {
-    console.error("❌ Could not save config:", error.message);
+    console.error("Could not save config:", error.message);
   }
 }
 app.use(cors());
@@ -77,11 +77,11 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
       }
     }
 
-    console.log(`🔍 Querying Jackett: ${searchQuery} (Type: ${mediaType}, Cat: ${categories})`);
+    console.log(`Querying Jackett: ${searchQuery} (Type: ${mediaType}, Cat: ${categories})`);
 
     const jacketUrl = `${JACKETT_URL}/api/v2.0/indexers/all/results`;
     const searchUrl = `${jacketUrl}?apikey=${JACKETT_API_KEY}&Query=${encodeURIComponent(searchQuery)}&Category=${categories}`;
-    console.log(`🔗 Jackett URL: ${searchUrl}`);
+    console.log(`Jackett URL: ${searchUrl}`);
 
     const response = await fetch(searchUrl, {
       method: "GET",
@@ -95,11 +95,11 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
     const data = await response.json();
 
     if (!data.Results || data.Results.length === 0) {
-      console.log(`⚠️  No results from Jackett, using mock data`);
+      console.log(`No results from Jackett, using mock data`);
       return getMockResults(title);
     }
 
-    console.log(`✅ Found ${data.Results.length} results from Jackett`);
+    console.log(`Found ${data.Results.length} results from Jackett`);
 
     // Convert Jackett results to our format
     const results = data.Results.map((item) => {
@@ -133,7 +133,7 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
       .toLowerCase()
       .split(/[\s.]+/)
       .filter((w) => w.length > 2);
-    console.log(`🔍 Searching for words: ${movieWords.join(", ")}`);
+    console.log(`Searching for words: ${movieWords.join(", ")}`);
 
     const titleMatches = results.filter((t) => {
       const titleLower = t.title.toLowerCase();
@@ -145,7 +145,7 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
 
       if (hasMatch) {
         console.log(
-          `✅ MATCH: ${t.title} (matched ${matchCount}/${movieWords.length} words)`,
+          `MATCH: ${t.title} (matched ${matchCount}/${movieWords.length} words)`,
         );
       }
 
@@ -154,9 +154,9 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
 
     if (titleMatches.length > 0) {
       console.log(
-        `🎯 Found ${titleMatches.length} results matching "${title}"`,
+        `Found ${titleMatches.length} results matching "${title}"`,
       );
-      console.log(`📋 Top match: ${titleMatches[0].title}`);
+      console.log(`Top match: ${titleMatches[0].title}`);
       
       // For TV shows with season/episode, filter by those specifically
       if (mediaType === 'tv' && seasonEpi) {
@@ -168,7 +168,7 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
         const epMatches = titleMatches.filter(t => epPattern.test(t.title) && !rangePattern.test(t.title));
         
         if (epMatches.length > 0) {
-          console.log(`✅ Filtered to ${epMatches.length} results matching ${seasonEpi}`);
+          console.log(`Filtered to ${epMatches.length} results matching ${seasonEpi}`);
           // Sort by file size (largest first), then by seeders
           epMatches.sort((a, b) => {
             const sizeA = a.size || 0;
@@ -190,15 +190,15 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
       return titleMatches.slice(0, 50);
     }
 
-    console.log(`⚠️  No results found matching "${title}"`);
-    console.log(`🔍 Words searched: ${movieWords.join(", ")}`);
-    console.log(`📊 First 5 results from Jackett:`);
+    console.log(`  No results found matching "${title}"`);
+    console.log(`Words searched: ${movieWords.join(", ")}`);
+    console.log(`First 5 results from Jackett:`);
     results.slice(0, 5).forEach((r, i) => {
       console.log(`   ${i + 1}. ${r.title} (${r.seeders} seeders)`);
     });
 
     console.log(
-      `⚠️  No results found matching "${title}", falling back to top results`,
+      `  No results found matching "${title}", falling back to top results`,
     );
 
     // Sort by file size (largest first), then by seeders
@@ -210,7 +210,7 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
     });
   } catch (error) {
     console.log(
-      `⚠️  Jackett error (${error.message}), falling back to mock data`,
+      `  Jackett error (${error.message}), falling back to mock data`,
     );
     console.log(
       `💡 To use Jackett: Install from https://github.com/Jackett/Jackett`,
@@ -231,7 +231,7 @@ async function getRealMagnetLink(jackettLink) {
   // If it's a Jackett proxy URL, fetch the actual torrent info
   if (jackettLink.includes("localhost:9117/dl/")) {
     try {
-      console.log(`🔄 Converting Jackett proxy to magnet...`);
+      console.log(`Converting Jackett proxy to magnet...`);
       const response = await fetch(jackettLink, {
         method: "GET",
         redirect: "manual", // Don't follow redirect, get the magnet from response
@@ -240,7 +240,7 @@ async function getRealMagnetLink(jackettLink) {
       // Jackett returns the magnet link in the response or redirects to it
       const location = response.headers.get("location");
       if (location && location.startsWith("magnet:")) {
-        console.log(`✅ Got real magnet link`);
+        console.log(`Got real magnet link`);
         return location;
       }
 
@@ -248,11 +248,11 @@ async function getRealMagnetLink(jackettLink) {
       const text = await response.text();
       const magnetMatch = text.match(/magnet:\?xt=[^"]+/);
       if (magnetMatch) {
-        console.log(`✅ Extracted magnet from response`);
+        console.log(`Extracted magnet from response`);
         return magnetMatch[0];
       }
     } catch (error) {
-      console.log(`⚠️  Could not convert proxy link: ${error.message}`);
+      console.log(`  Could not convert proxy link: ${error.message}`);
     }
   }
 
@@ -291,13 +291,13 @@ function getMockResults(movieTitle) {
 
 // Status Endpoint - Check Jackett connection
 app.get("/api/status", async (req, res) => {
-  console.log("🔍 Status endpoint called");
+  console.log("Status endpoint called");
   const status = {
-    backend: "✅ Running",
-    jackett: "❓ Unknown",
+    backend: "Running",
+    jackett: "Unknown",
     config: {
-      tmdb_api_key: CONFIG.tmdb_api_key ? "✅ Configured" : "⚠️  Not configured",
-      jackett_api_key: CONFIG.jackett_api_key ? "✅ Configured" : "⚠️  Not configured",
+      tmdb_api_key: CONFIG.tmdb_api_key ? "Configured" : "  Not configured",
+      jackett_api_key: CONFIG.jackett_api_key ? "Configured" : "  Not configured",
       jackett_ip: CONFIG.jackett_ip || "localhost",
       jackett_port: CONFIG.jackett_port || 9117,
     },
@@ -305,9 +305,9 @@ app.get("/api/status", async (req, res) => {
 
   // Test Jackett connection
   try {
-    console.log(`🔍 Testing Jackett connection...`);
+    console.log(`Testing Jackett connection...`);
     if (!CONFIG.jackett_api_key) {
-      status.jackett = "⚠️  API key not configured";
+      status.jackett = "  API key not configured";
     } else {
       console.log(
         `🔑 Using API key: ${CONFIG.jackett_api_key.substring(0, 8)}...`,
@@ -322,15 +322,15 @@ app.get("/api/status", async (req, res) => {
       );
 
       if (response.ok) {
-        console.log(`✅ Jackett connected successfully`);
-        status.jackett = `✅ Connected`;
+        console.log(`Jackett connected successfully`);
+        status.jackett = `Connected`;
       } else {
         throw new Error(`HTTP ${response.status}`);
       }
     }
   } catch (error) {
-    console.log(`❌ Jackett connection failed: ${error.message}`);
-    status.jackett = `❌ Not running or unreachable`;
+    console.log(`Jackett connection failed: ${error.message}`);
+    status.jackett = `Not running or unreachable`;
   }
 
   res.json(status);
@@ -358,7 +358,7 @@ app.post("/api/config", (req, res) => {
 
   res.json({
     success: true,
-    message: "✅ Configuration updated and saved",
+    message: "Configuration updated and saved",
     config: {
       tmdb_api_key: CONFIG.tmdb_api_key ? "***configured***" : "Not set",
       jackett_api_key: CONFIG.jackett_api_key ? "***configured***" : "Not set",
@@ -426,7 +426,7 @@ app.get("/api/stream", async (req, res) => {
     activeStreams.set(magnet, engine);
 
     engine.on('ready', () => {
-      console.log(`🎬 Engine ready`);
+      console.log(`Engine ready`);
     });
   }
 
@@ -510,7 +510,7 @@ app.post("/api/test-jackett", async (req, res) => {
     if (response.ok) {
       res.json({ 
         success: true, 
-        message: "✅ Jackett connection successful!" 
+        message: "Jackett connection successful!" 
       });
     } else {
       res.status(response.status).json({ 
@@ -529,13 +529,13 @@ app.post("/api/test-jackett", async (req, res) => {
 // Start Server
 const serverPort = 7676;
 const expressServer = app.listen(serverPort, () => {
-  console.log(`\n✅ Backend running on http://localhost:${serverPort}`);
-  console.log("\n📝 Available endpoints:");
+  console.log(`\nBackend running on http://localhost:${serverPort}`);
+  console.log("\nAvailable endpoints:");
   console.log("  GET  /api/stream - Stream torrent directly");
   console.log("  POST /api/search - Test search");
   console.log("  GET  /api/status - Check Jackett status");
   console.log("  POST /api/config - Configure all services");
-  console.log("\n🚀 SETUP INSTRUCTIONS:");
+  console.log("\nSETUP INSTRUCTIONS:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`1. Open http://localhost:${serverPort}/setup.html in your browser`);
   console.log("2. Enter your TMDB API key (get from themoviedb.org)");
