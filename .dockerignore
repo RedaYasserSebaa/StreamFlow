@@ -1,0 +1,14 @@
+node_modules
+.npm
+.git
+.github
+dist
+dist-installer
+*.exe
+*.deb
+Dockerfile
+.dockerignore
+.gitignore
+SECURITY.md
+README.md
+winCodeSign.7z
