@@ -16,3 +16,4 @@ config.json
 
 # Tool caches
 .aider.tags.cache.v4
+SECURITY.md

@@ -1,18 +1,30 @@
 {
-  "name": "movie-downloader",
-  "version": "1.0.0",
+  "name": "streamflow-app",
+  "version": "1.0.1",
   "description": "",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "build": {
     "appId": "com.streamflow.app",
     "productName": "StreamFlow",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "RedaYasserSebaa",
+        "repo": "StreamFlow"
+      }
+    ],
     "win": {
       "target": "nsis"
+    },
+    "linux": {
+      "target": "deb",
+      "category": "Video"
     },
     "nsis": {
       "oneClick": true,
