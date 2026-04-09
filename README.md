@@ -13,9 +13,32 @@ Welcome to **Stream Flow**, a standalone application that integrates movie and T
 
 ## 🚀 How to Install and Use
 
-1. **Download the Installer:** Go to the **Releases** tab on this GitHub repository and download the latest `StreamFlow Setup .exe` file.
-2. **Install:** Double click the `.exe` file to install the application.
-3. **Run Stream Flow:** Once installed, Stream Flow runs as a lightweight background server (accessible via your Windows system tray) and will automatically open the beautiful streaming UI in your default web browser.
+You can install Stream Flow using one of three methods:
+
+### Method 1: Using the Installer (Windows `.exe` or Linux `.deb`)
+1. **Download:** Go to the **Releases** tab on this GitHub repository and download the latest Windows `.exe` or Linux `.deb` installer.
+2. **Install:** Double click the file or run `sudo dpkg -i streamflow.deb` to install the application.
+3. **Run:** Once installed, Stream Flow runs as a lightweight background server and will automatically open the streaming UI in your default web browser.
+
+### Method 2: Using NPM (NodeJS)
+If you already have NodeJS installed, you can download and run the application entirely from the terminal:
+1. **Install globally:**
+   ```bash
+   npm install -g streamflow-app
+   ```
+2. **Run:**
+   ```bash
+   streamflow-app
+   ```
+   *The server will start on port 7676. Open `http://localhost:7676` in your browser.*
+
+### Method 3: Using Docker (Headless Server)
+For server administrators or NAS setups, you can run the headless Stream Flow container:
+1. **Pull and Run the image:**
+   ```bash
+   docker run -d -p 7676:7676 redayasser/streamflow:latest
+   ```
+2. **Access:** Open `http://localhost:7676` in your browser.
 
 ### Initial Setup Requirements
 When you first launch the app, you will be directed to a setup page that requires two external services:
@@ -59,8 +82,8 @@ If you are a developer and wish to run the app from source, modify the code, or 
 ## 📋 To Do / Roadmap
 
 There are massive plans for the future of Stream Flow. Upcoming milestones include:
-- [ ] Create Docker image
-- [ ] Create macOS and Linux versions
+- [x] Create Docker image
+- [x] Create macOS and Linux versions
 - [ ] Add Subtitle Provider integration directly in the player
 - [ ] Create Android TV app version
 

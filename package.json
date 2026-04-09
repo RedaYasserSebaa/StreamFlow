@@ -3,6 +3,9 @@
   "version": "1.0.1",
   "description": "",
   "main": "main.js",
+  "bin": {
+    "streamflow-app": "server.js"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win",
