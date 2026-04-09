@@ -79,16 +79,6 @@ If you are a developer and wish to run the app from source, modify the code, or 
 
 ---
 
-## 📋 To Do / Roadmap
-
-There are massive plans for the future of Stream Flow. Upcoming milestones include:
-- [x] Create Docker image
-- [x] Create macOS and Linux versions
-- [ ] Add Subtitle Provider integration directly in the player
-- [ ] Create Android TV app version
-
----
-
 ## License
 
 This project is licensed under the MIT License.
