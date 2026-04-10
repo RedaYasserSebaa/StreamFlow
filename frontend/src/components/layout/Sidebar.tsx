@@ -1,9 +1,9 @@
-import { Home, Compass, List, Settings } from 'lucide-react';
+import { Home, Compass, List, Settings, LogOut } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { motion } from 'framer-motion';
 
 const Sidebar = () => {
-  const { currentView, setCurrentView, setSearchQuery } = useStore();
+  const { currentView, setCurrentView, setSearchQuery, logout } = useStore();
 
   const navItems = [
     { id: 'home', icon: Home, label: 'Home' },
@@ -53,17 +53,29 @@ const Sidebar = () => {
         })}
       </div>
 
-      <button 
-        onClick={() => handleNav('settings')}
-        className={`p-3 transition-colors group relative ${
-          currentView === 'settings' ? 'bg-accent-primary text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'text-muted hover:text-white hover:bg-white/5'
-        } rounded-xl`}
-      >
-        <Settings size={24} />
-        <span className="absolute left-full ml-4 px-2 py-1 bg-surface border border-white/10 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-          Settings
-        </span>
-      </button>
+      <div className="flex flex-col gap-4 mt-auto">
+        <button 
+          onClick={() => handleNav('settings')}
+          className={`p-3 transition-colors group relative ${
+            currentView === 'settings' ? 'bg-accent-primary text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'text-muted hover:text-white hover:bg-white/5'
+          } rounded-xl`}
+        >
+          <Settings size={24} />
+          <span className="absolute left-full ml-4 px-2 py-1 bg-surface border border-white/10 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+            Settings
+          </span>
+        </button>
+
+        <button 
+          onClick={() => logout()}
+          className="p-3 text-muted hover:text-accent-danger hover:bg-accent-danger/10 transition-all rounded-xl group relative"
+        >
+          <LogOut size={24} />
+          <span className="absolute left-full ml-4 px-2 py-1 bg-surface border border-white/10 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+            Log Out
+          </span>
+        </button>
+      </div>
     </motion.nav>
   );
 };

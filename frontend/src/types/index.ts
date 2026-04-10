@@ -28,6 +28,12 @@ export interface UserConfig {
   jackett_ip: string;
   jackett_port: number;
   backend_url: string;
+  subtitle_api_key?: string;
+}
+
+export interface User {
+  username: string;
+  token?: string;
 }
 
 export interface StreamStats {

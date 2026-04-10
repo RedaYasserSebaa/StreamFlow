@@ -7,9 +7,9 @@ import MainLayout from './layout/MainLayout';
 import { useStore } from './store/useStore';
 
 function App() {
-  const { currentView, isConfigured, searchQuery } = useStore();
+  const { currentView, isConfigured, searchQuery, isAuthenticated } = useStore();
 
-  if (!isConfigured()) {
+  if (!isAuthenticated() || !isConfigured()) {
     return <Setup />;
   }
 

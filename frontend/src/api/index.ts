@@ -11,11 +11,42 @@ export const getTmdbApi = (apiKey: string) => {
   return instance;
 };
 
-export const getBackendApi = (baseUrl: string) => {
+export const getBackendApi = (baseUrl: string, token?: string) => {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   const instance = axios.create({
     baseURL: baseUrl,
+    headers
   });
   return instance;
+};
+
+// Auth API
+export const loginUser = async (baseUrl: string, credentials: any) => {
+  const api = getBackendApi(baseUrl);
+  const response = await api.post('/api/auth/login', credentials);
+  return response.data;
+};
+
+export const registerUser = async (baseUrl: string, credentials: any) => {
+  const api = getBackendApi(baseUrl);
+  const response = await api.post('/api/auth/register', credentials);
+  return response.data;
+};
+
+// User Data Sync
+export const syncUserData = async (baseUrl: string, token: string, data: any) => {
+  const api = getBackendApi(baseUrl, token);
+  const response = await api.post('/api/user/data', data);
+  return response.data;
+};
+
+export const fetchUserData = async (baseUrl: string, token: string) => {
+  const api = getBackendApi(baseUrl, token);
+  const response = await api.get('/api/user/data');
+  return response.data;
 };
 
 // Helper for image paths

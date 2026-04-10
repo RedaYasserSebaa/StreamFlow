@@ -1,0 +1,17 @@
+[
+  {
+    "id": "1775844621469",
+    "username": "Reda",
+    "password": "$2b$10$7kzLUB7C2aEb3y42KyUXweRPjsG2Fp6TLT4hPsAIoY00deWcPVB4.",
+    "config": {
+      "tmdb_api_key": "67f40c839389173ff8c72c3ebeb4b312",
+      "jackett_api_key": "93xmot91ojq9aclppetwft0a4yrr5pgq",
+      "jackett_ip": "192.168.1.227",
+      "jackett_port": 9117,
+      "backend_url": "http://localhost:7676",
+      "subtitle_api_key": ""
+    },
+    "userLists": {},
+    "continueWatching": []
+  }
+]
