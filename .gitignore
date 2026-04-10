@@ -13,7 +13,8 @@ winCodeSign.7z
 # Environment and secrets
 .env
 config.json
+users.json
 
-# Tool caches
-.aider.tags.cache.v4
+
 SECURITY.md
+legacy/

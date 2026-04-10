@@ -18,7 +18,7 @@ let serverInstance = null;
 app.on('ready', () => {
   // Try to start the express server
   try {
-    serverInstance = require('./server');
+    serverInstance = require('./backend/server');
     console.log("Server started in background on windowless electron");
   } catch (error) {
     console.error("Failed to start server:", error);

@@ -8,7 +8,32 @@ const fs = require("fs");
 const path = require("path");
 const torrentStream = require("torrent-stream");
 
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
 const app = express();
+const JWT_SECRET = process.env.JWT_SECRET || "streamflow-super-secret-key-123";
+
+// Load or create users database
+const USERS_FILE = path.join(process.env.STREAMFLOW_CONFIG_DIR || __dirname, "users.json");
+let USERS = [];
+
+try {
+  if (fs.existsSync(USERS_FILE)) {
+    USERS = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+    console.log(`Loaded ${USERS.length} users from file`);
+  }
+} catch (error) {
+  console.log("Could not load users file, starting with empty database");
+}
+
+function saveUsers() {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(USERS, null, 2));
+  } catch (error) {
+    console.error("Could not save users:", error.message);
+  }
+}
 
 // Load or create configuration
 const CONFIG_DIR = process.env.STREAMFLOW_CONFIG_DIR || __dirname;
@@ -43,7 +68,116 @@ function saveConfig() {
 }
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname)); // Serve static frontend files
+
+// Auth Middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Forbidden" });
+    req.user = user;
+    next();
+  });
+};
+
+// Auth Endpoints
+app.post("/api/auth/register", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+
+  if (USERS.find(u => u.username === username)) {
+    return res.status(400).json({ error: "User already exists" });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = {
+      id: Date.now().toString(),
+      username,
+      password: hashedPassword,
+      config: null,
+      userLists: {},
+      continueWatching: []
+    };
+    USERS.push(newUser);
+    saveUsers();
+
+    const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET);
+    res.json({ success: true, token, user: { username: newUser.username, config: newUser.config } });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  const { username, password } = req.body;
+  const user = USERS.find(u => u.username === username);
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+  res.json({ 
+    success: true, 
+    token, 
+    user: { 
+      username: user.username, 
+      config: user.config,
+      userLists: user.userLists,
+      continueWatching: user.continueWatching
+    } 
+  });
+});
+
+app.delete("/api/auth/delete-me", authenticateToken, (req, res) => {
+  const userIndex = USERS.findIndex(u => u.id === req.user.id);
+  if (userIndex === -1) return res.status(404).json({ error: "User not found" });
+
+  USERS.splice(userIndex, 1);
+  saveUsers();
+  res.json({ success: true });
+});
+
+// User Data Sync Endpoints
+app.get("/api/user/data", authenticateToken, (req, res) => {
+  const user = USERS.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+  
+  res.json({
+    config: user.config,
+    userLists: user.userLists,
+    continueWatching: user.continueWatching
+  });
+});
+
+app.post("/api/user/data", authenticateToken, (req, res) => {
+  const userIndex = USERS.findIndex(u => u.id === req.user.id);
+  if (userIndex === -1) return res.status(404).json({ error: "User not found" });
+
+  const { config, userLists, continueWatching } = req.body;
+  
+  if (config !== undefined) USERS[userIndex].config = config;
+  if (userLists !== undefined) USERS[userIndex].userLists = userLists;
+  if (continueWatching !== undefined) USERS[userIndex].continueWatching = continueWatching;
+
+  saveUsers();
+  res.json({ success: true });
+});
+
+// Serve static frontend files
+const distPath = path.join(__dirname, "../frontend/dist");
+if (fs.existsSync(distPath)) {
+  console.log("Serving frontend from /frontend/dist");
+  app.use(express.static(distPath));
+} else {
+  console.log("Serving frontend from legacy folder");
+  const legacyPath = path.join(__dirname, "../legacy");
+  app.use(express.static(legacyPath));
+}
 
 // Function to search real torrents using Jackett
 async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = '') {
