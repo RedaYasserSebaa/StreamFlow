@@ -31,7 +31,7 @@
       "extraFiles": [
         {
           "from": "package/linux/streamflow.service",
-          "to": "/lib/systemd/system/streamflow.service"
+          "to": "streamflow.service"
         }
       ],
       "synopsis": "Seamless torrent streaming and media management."
