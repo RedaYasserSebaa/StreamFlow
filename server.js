@@ -43,7 +43,16 @@ function saveConfig() {
 }
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname)); // Serve static frontend files
+
+// Serve static frontend files
+const distPath = path.join(__dirname, "frontend/dist");
+if (fs.existsSync(distPath)) {
+  console.log("Serving frontend from /frontend/dist");
+  app.use(express.static(distPath));
+} else {
+  console.log("Serving frontend from root (Legacy)");
+  app.use(express.static(__dirname));
+}
 
 // Function to search real torrents using Jackett
 async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = '') {
