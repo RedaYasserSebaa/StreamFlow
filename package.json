@@ -38,7 +38,7 @@
     },
     "deb": {
       "afterInstall": "package/linux/after-install.sh",
-      "beforeRemove": "package/linux/before-remove.sh"
+      "fpm": ["--before-remove", "package/linux/before-remove.sh"]
     },
     "nsis": {
       "oneClick": true,
