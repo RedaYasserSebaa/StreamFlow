@@ -1,45 +1,5 @@
 [
   {
-    "id": "1775844621469",
-    "username": "Reda",
-    "password": "$2b$10$7kzLUB7C2aEb3y42KyUXweRPjsG2Fp6TLT4hPsAIoY00deWcPVB4.",
-    "config": {
-      "tmdb_api_key": "67f40c839389173ff8c72c3ebeb4b312",
-      "jackett_api_key": "93xmot91ojq9aclppetwft0a4yrr5pgq",
-      "jackett_ip": "192.168.1.227",
-      "jackett_port": 9117,
-      "backend_url": "http://localhost:7676",
-      "subtitle_api_key": ""
-    },
-    "userLists": {
-      "Watch Later": [
-        {
-          "adult": false,
-          "backdrop_path": "/bq28ajZaoMyzEIm6REelqyqtEDZ.jpg",
-          "id": 76479,
-          "name": "The Boys",
-          "original_name": "The Boys",
-          "overview": "A group of vigilantes known informally as “The Boys” set out to take down corrupt superheroes with no more than blue-collar grit and a willingness to fight dirty.",
-          "poster_path": "/in1R2dDc421JxsoRWaIIAqVI2KE.jpg",
-          "media_type": "tv",
-          "original_language": "en",
-          "genre_ids": [
-            10765,
-            10759
-          ],
-          "popularity": 824.8956,
-          "first_air_date": "2019-07-25",
-          "vote_average": 8.44,
-          "vote_count": 11807,
-          "origin_country": [
-            "US"
-          ]
-        }
-      ]
-    },
-    "continueWatching": []
-  },
-  {
     "id": "1775844752745",
     "username": "Test",
     "password": "$2b$10$u0x.t74we0vKHIV9Lbsb5O9aQUTUBmfHT4owJ8zIF6QRMrwGvwJUy",
@@ -78,6 +38,21 @@
         }
       ]
     },
+    "continueWatching": []
+  },
+  {
+    "id": "1775847827220",
+    "username": "Reda",
+    "password": "$2b$10$fNg2qUbmTGHEdI7Qcei4fu7Nu3IwAfIPcbm1n7ixE7nbYBmaYWZwa",
+    "config": {
+      "tmdb_api_key": "67f40c839389173ff8c72c3ebeb4b312",
+      "jackett_api_key": "93xmot91ojq9aclppetwft0a4yrr5pgq",
+      "jackett_ip": "192.168.1.227",
+      "jackett_port": 9117,
+      "backend_url": "http://localhost:7676",
+      "subtitle_api_key": ""
+    },
+    "userLists": {},
     "continueWatching": []
   }
 ]
