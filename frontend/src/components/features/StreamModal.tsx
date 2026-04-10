@@ -1,14 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, PlayCircle, Plus, Loader2, Download, Users, HardDrive } from 'lucide-react';
+import { X, PlayCircle, Plus, Loader2, Download, Users, HardDrive, Type, Settings2, FileUp } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { fetchMovieDetails, fetchTVSeason, searchStreams, fetchStreamStats, getImagePath } from '../../api';
+import { fetchMovieDetails, fetchTVSeason, searchStreams, fetchStreamStats, getImagePath, srt2vtt } from '../../api';
 import VideoPlayer from './VideoPlayer';
 import TorrentList from './TorrentList';
 import type { Torrent } from '../../types';
 
 const StreamModal = () => {
-  const { selectedMovie, setSelectedMovie, config, userLists, addToList, addToContinueWatching } = useStore();
+  const { selectedMovie, setSelectedMovie, config, userLists, addToList, addToContinueWatching, subtitleStyle, updateSubtitleStyle } = useStore();
   const [details, setDetails] = useState<any>(null);
   const [torrents, setTorrents] = useState<Torrent[]>([]);
   const [loadingTorrents, setLoadingTorrents] = useState(false);
@@ -20,6 +20,11 @@ const StreamModal = () => {
   // Filter States
   const [qualityFilter, setQualityFilter] = useState('all');
   const [indexerFilter, setIndexerFilter] = useState('all');
+
+  // Subtitle States
+  const [customSubtitles, setCustomSubtitles] = useState<{ src: string; label: string }[]>([]);
+  const [showSubSettings, setShowSubSettings] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // TV State
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
@@ -94,6 +99,28 @@ const StreamModal = () => {
     }, 2000);
   };
 
+  const handleSubtitleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      let content = event.target?.result as string;
+      if (file.name.endsWith('.srt')) {
+        content = srt2vtt(content);
+      }
+
+      const blob = new Blob([content], { type: 'text/vtt' });
+      const url = URL.createObjectURL(blob);
+      
+      setCustomSubtitles(prev => [
+        ...prev,
+        { src: url, label: file.name }
+      ]);
+    };
+    reader.readAsText(file);
+  };
+
   const formatSpeed = (speed: number) => {
     if (speed > 1024 * 1024) return `${(speed / (1024 * 1024)).toFixed(2)} MB/s`;
     if (speed > 1024) return `${(speed / 1024).toFixed(0)} KB/s`;
@@ -145,6 +172,8 @@ const StreamModal = () => {
             <div className="flex-1 relative">
               <VideoPlayer 
                 src={streamUrl} 
+                subtitles={customSubtitles}
+                subtitleStyle={subtitleStyle}
                 onPlaying={() => setIsBuffering(false)}
                 onWaiting={() => setIsBuffering(true)}
               />
@@ -187,6 +216,108 @@ const StreamModal = () => {
                     )}
                   </motion.div>
                 )}
+              </div>
+
+              {/* Subtitle Controls Overlay */}
+              <div className="absolute top-6 right-6 z-30 flex flex-col items-end gap-3">
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleSubtitleImport}
+                    accept=".srt,.vtt"
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-accent-primary/20 hover:border-accent-primary/30 transition-all"
+                  >
+                    <FileUp size={14} className="text-accent-primary" /> Import Subtitles
+                  </button>
+                  <button
+                    onClick={() => setShowSubSettings(!showSubSettings)}
+                    className="p-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all"
+                  >
+                    <Settings2 size={16} />
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {showSubSettings && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      className="w-64 p-5 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl space-y-5"
+                    >
+                      <div className="flex items-center gap-2 text-[10px] text-muted uppercase tracking-widest font-black border-b border-white/5 pb-3">
+                        <Type size={14} className="text-accent-primary" />
+                        Subtitle Styling
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-[10px] text-muted font-bold uppercase">
+                          <span>Font Size</span>
+                          <span className="text-accent-primary">{subtitleStyle.fontSize}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="16"
+                          max="96"
+                          value={subtitleStyle.fontSize}
+                          onChange={(e) => updateSubtitleStyle({ fontSize: parseInt(e.target.value) })}
+                          className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-accent-primary"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-muted font-bold uppercase">Font Family</label>
+                        <select
+                          value={subtitleStyle.fontFamily}
+                          onChange={(e) => updateSubtitleStyle({ fontFamily: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-[11px] focus:outline-none focus:border-accent-primary transition-all appearance-none cursor-pointer"
+                        >
+                          <option value="Inter, sans-serif">Inter (Default)</option>
+                          <option value="Arial, sans-serif">Arial</option>
+                          <option value="'Courier New', monospace">Courier New</option>
+                          <option value="'Times New Roman', serif">Times New Roman</option>
+                          <option value="Verdana, sans-serif">Verdana</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] text-muted font-bold uppercase">Color</label>
+                          <div className="relative group">
+                            <input
+                              type="color"
+                              value={subtitleStyle.color}
+                              onChange={(e) => updateSubtitleStyle({ color: e.target.value })}
+                              className="w-full h-8 bg-transparent border-none rounded cursor-pointer"
+                            />
+                            <div 
+                              className="absolute inset-0 rounded-lg border border-white/10 pointer-events-none" 
+                              style={{ backgroundColor: subtitleStyle.color }}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] text-muted font-bold uppercase">Background</label>
+                          <button
+                            onClick={() => updateSubtitleStyle({ background: !subtitleStyle.background })}
+                            className={`w-full h-8 rounded-lg border transition-all text-[10px] font-bold uppercase ${
+                              subtitleStyle.background 
+                                ? 'bg-accent-primary/20 border-accent-primary text-accent-primary' 
+                                : 'bg-white/5 border-white/10 text-muted'
+                            }`}
+                          >
+                            {subtitleStyle.background ? 'Enabled' : 'Disabled'}
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           ) : (

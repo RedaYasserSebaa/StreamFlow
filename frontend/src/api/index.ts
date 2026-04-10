@@ -85,10 +85,15 @@ export const fetchTVSeason = async (apiKey: string, tvId: number, seasonNumber: 
   return response.data;
 };
 
-export const fetchStreamStats = async (backendUrl: string, magnet: string): Promise<any> => {
-  const api = getBackendApi(backendUrl);
-  const response = await api.get('/api/stream/stats', { params: { magnet } });
+export const fetchStreamStats = async (backendUrl: string, magnet: string) => {
+  const response = await axios.get(`${backendUrl}/api/stream/stats?magnet=${encodeURIComponent(magnet)}`);
   return response.data;
+};
+
+export const srt2vtt = (srt: string) => {
+  let vtt = "WEBVTT\n\n";
+  vtt += srt.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+  return vtt;
 };
 
 export const searchStreams = async (backendUrl: string, title: string, type: 'movie' | 'tv', seasonEpi?: string): Promise<Torrent[]> => {

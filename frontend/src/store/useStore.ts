@@ -19,6 +19,13 @@ interface AppState {
   continueWatching: Movie[];
   addToContinueWatching: (movie: Movie) => void;
   isConfigured: () => boolean;
+  subtitleStyle: {
+    fontSize: number;
+    fontFamily: string;
+    color: string;
+    background: boolean;
+  };
+  updateSubtitleStyle: (style: Partial<AppState['subtitleStyle']>) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -86,4 +93,15 @@ export const useStore = create<AppState>((set, get) => ({
     const config = get().config;
     return !!(config && config.tmdb_api_key && config.jackett_api_key);
   },
+  subtitleStyle: JSON.parse(localStorage.getItem('subtitleStyle') || JSON.stringify({
+    fontSize: 24,
+    fontFamily: 'Inter, sans-serif',
+    color: '#ffffff',
+    background: true
+  })),
+  updateSubtitleStyle: (style) => set((state) => {
+    const newStyle = { ...state.subtitleStyle, ...style };
+    localStorage.setItem('subtitleStyle', JSON.stringify(newStyle));
+    return { subtitleStyle: newStyle };
+  }),
 }));

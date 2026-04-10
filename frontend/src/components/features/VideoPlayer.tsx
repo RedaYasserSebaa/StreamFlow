@@ -8,9 +8,15 @@ interface VideoPlayerProps {
   onPlaying?: () => void;
   onWaiting?: () => void;
   subtitles?: { src: string; label: string }[];
+  subtitleStyle?: {
+    fontSize: number;
+    fontFamily: string;
+    color: string;
+    background: boolean;
+  };
 }
 
-const VideoPlayer = ({ src, poster, onPlaying, onWaiting, subtitles }: VideoPlayerProps) => {
+const VideoPlayer = ({ src, poster, onPlaying, onWaiting, subtitles, subtitleStyle }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Plyr | null>(null);
 
@@ -43,7 +49,16 @@ const VideoPlayer = ({ src, poster, onPlaying, onWaiting, subtitles }: VideoPlay
   }, [src]);
 
   return (
-    <div className="w-full h-full bg-black relative rounded-xl overflow-hidden group">
+    <div 
+      className="w-full h-full bg-black relative rounded-xl overflow-hidden group"
+      style={{
+        // @ts-ignore
+        '--sub-size': `${subtitleStyle?.fontSize || 24}px`,
+        '--sub-font': subtitleStyle?.fontFamily || 'sans-serif',
+        '--sub-color': subtitleStyle?.color || '#ffffff',
+        '--sub-bg': subtitleStyle?.background ? 'rgba(0, 0, 0, 0.75)' : 'transparent',
+      }}
+    >
       <video
         ref={videoRef}
         className="plyr-react plyr"

@@ -14,6 +14,6 @@ winCodeSign.7z
 .env
 config.json
 
-# Tool caches
-.aider.tags.cache.v4
+
 SECURITY.md
+legacy/
