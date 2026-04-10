@@ -2,17 +2,22 @@ import Home from './pages/Home';
 import Setup from './pages/Setup';
 import Discover from './pages/Discover';
 import MyLists from './pages/MyLists';
+import SearchResults from './pages/SearchResults';
 import MainLayout from './layout/MainLayout';
 import { useStore } from './store/useStore';
 
 function App() {
-  const { currentView, isConfigured } = useStore();
+  const { currentView, isConfigured, searchQuery } = useStore();
 
   if (!isConfigured()) {
     return <Setup />;
   }
 
   const renderContent = () => {
+    if (searchQuery.trim().length > 0) {
+      return <SearchResults />;
+    }
+
     switch (currentView) {
       case 'home':
         return <Home />;

@@ -11,8 +11,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="flex bg-background min-h-screen">
       <Sidebar />
       
-      <main className="ml-20 flex-1 px-8 py-8 md:px-12">
-        <div className="max-w-7xl mx-auto">
+      <main className="ml-20 flex-1 py-8">
+        <div className="w-full px-6 md:px-10">
           {/* ... existing header code ... */}
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
             <div>
