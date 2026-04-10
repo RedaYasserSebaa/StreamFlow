@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search } from 'lucide-react';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { searchQuery, setSearchQuery, selectedMovie, toast, setCurrentView } = useStore();
+  const { searchQuery, setSearchQuery, selectedMovie, setCurrentView } = useStore();
 
   return (
     <div className="flex bg-background min-h-screen">
@@ -55,25 +55,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </main>
 
-      {/* Toast Notification */}
       <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 20, x: '-50%' }}
-            className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl glass border border-white/10 shadow-2xl flex items-center gap-3 min-w-[300px] ${
-              toast.type === 'success' ? 'border-accent-primary/30' : 
-              toast.type === 'error' ? 'border-red-500/30' : 'border-white/10'
-            }`}
-          >
-            <div className={`w-2 h-2 rounded-full ${
-              toast.type === 'success' ? 'bg-accent-primary animate-pulse' : 
-              toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-            }`} />
-            <p className="text-sm font-medium text-white">{toast.message}</p>
-          </motion.div>
-        )}
+        {selectedMovie && <StreamModal />}
       </AnimatePresence>
 
       <AnimatePresence>

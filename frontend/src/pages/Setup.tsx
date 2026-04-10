@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Key, Server, CheckCircle, Network, ChevronRight, 
@@ -8,13 +8,14 @@ import { useStore } from '../store/useStore';
 import { getBackendApi, loginUser, registerUser } from '../api';
 
 const Setup = () => {
-  const { config, setConfig, login, showToast } = useStore();
+  const { config, setConfig, login, showToast, isAuthenticated } = useStore();
   const [step, setStep] = useState(1);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   
   const [authData, setAuthData] = useState({
     username: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
 
   const [formData, setFormData] = useState({
@@ -34,22 +35,31 @@ const Setup = () => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (isAuthenticated()) {
+      setStep(2);
+    }
+  }, [isAuthenticated]);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (authMode === 'signup' && authData.password !== authData.confirmPassword) {
+      showToast('Passwords do not match', 'error');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const authFunc = authMode === 'login' ? loginUser : registerUser;
       const res = await authFunc(formData.backend_url, authData);
       
       if (res.success) {
-        // If logging in, we might already have config
         login({ username: res.user.username, token: res.token }, res.user);
         
-        if (authMode === 'login' && res.user.config) {
-          // If login success and config exists, we're done
+        if (authMode === 'login' && res.user.config && res.user.config.tmdb_api_key) {
           showToast(`Welcome back, ${res.user.username}!`, 'success');
         } else {
-          // If signup or login without config, go to step 2
           setStep(2);
           if (res.user.config) {
             setFormData({ ...formData, ...res.user.config });
@@ -57,7 +67,8 @@ const Setup = () => {
         }
       }
     } catch (err: any) {
-      showToast(err.response?.data?.error || 'Authentication failed', 'error');
+      const errorMsg = err.response?.data?.error || 'Authentication failed. Please try again.';
+      showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -87,11 +98,8 @@ const Setup = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // First save to existing global config logic (backend server legacy support)
       const api = getBackendApi(formData.backend_url);
       await api.post('/api/config', formData);
-      
-      // Then set in store (which triggers sync to backend users.json if logged in)
       setConfig(formData);
       showToast('Configuration saved successfully!', 'success');
     } catch (err) {
@@ -127,10 +135,12 @@ const Setup = () => {
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-2 mb-10">
-          <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
-          <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
-        </div>
+        {!isAuthenticated() && (
+          <div className="flex items-center justify-center gap-2 mb-10">
+            <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
+            <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
+          </div>
+        )}
 
         <AnimatePresence mode="wait">
           {step === 1 ? (
@@ -169,6 +179,21 @@ const Setup = () => {
                     onChange={(e) => setAuthData({...authData, password: e.target.value})}
                   />
                 </div>
+                {authMode === 'signup' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-wider px-1 flex items-center gap-2">
+                      <Lock size={12} /> Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Confirm your password"
+                      required
+                      className={inputClasses}
+                      value={authData.confirmPassword}
+                      onChange={(e) => setAuthData({...authData, confirmPassword: e.target.value})}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="pt-2">
@@ -347,20 +372,22 @@ const Setup = () => {
               </div>
 
               <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="flex-1 px-6 py-4 rounded-2xl bg-surface border border-white/5 text-sm font-bold text-muted hover:text-white transition-all"
-                >
-                  Back
-                </button>
+                {!isAuthenticated() && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="flex-1 px-6 py-4 rounded-2xl bg-surface border border-white/5 text-sm font-bold text-muted hover:text-white transition-all"
+                  >
+                    Back
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="flex-[2] bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className={`${isAuthenticated() ? 'w-full' : 'flex-[2]'} bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50`}
                 >
                   {isLoading ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
-                  Complete Setup
+                  Save Configuration
                 </button>
               </div>
             </motion.form>

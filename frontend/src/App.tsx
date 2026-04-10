@@ -5,12 +5,18 @@ import MyLists from './pages/MyLists';
 import SearchResults from './pages/SearchResults';
 import MainLayout from './layout/MainLayout';
 import { useStore } from './store/useStore';
+import Toast from './components/common/Toast';
 
 function App() {
   const { currentView, isConfigured, searchQuery, isAuthenticated } = useStore();
 
   if (!isAuthenticated() || !isConfigured()) {
-    return <Setup />;
+    return (
+      <>
+        <Setup />
+        <Toast />
+      </>
+    );
   }
 
   const renderContent = () => {
@@ -33,9 +39,12 @@ function App() {
   };
 
   return (
-    <MainLayout>
-      {renderContent()}
-    </MainLayout>
+    <>
+      <MainLayout>
+        {renderContent()}
+      </MainLayout>
+      <Toast />
+    </>
   );
 }
 
