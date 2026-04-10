@@ -71,7 +71,7 @@ const Discover = () => {
     if (page < totalPages) fetchResults(page + 1);
   };
 
-  const selectClasses = "bg-surface border border-white/10 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-accent-primary transition-all appearance-none cursor-pointer";
+  const selectClasses = "premium-select";
 
   return (
     <div>
@@ -121,7 +121,7 @@ const Discover = () => {
           {/* Filter Row */}
           <div className="flex flex-wrap items-end gap-4">
             {/* Genre */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 w-full md:w-56">
               <label className="text-[10px] text-muted uppercase tracking-wider font-semibold px-1">Genre</label>
               <select
                 value={selectedGenre ?? ''}
@@ -136,7 +136,7 @@ const Discover = () => {
             </div>
 
             {/* Year */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 w-full md:w-56">
               <label className="text-[10px] text-muted uppercase tracking-wider font-semibold px-1">Year</label>
               <select
                 value={selectedYear ?? ''}
@@ -151,7 +151,7 @@ const Discover = () => {
             </div>
 
             {/* Sort */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 w-full md:w-56">
               <label className="text-[10px] text-muted uppercase tracking-wider font-semibold px-1">Sort By</label>
               <select
                 value={selectedSort}

@@ -26,6 +26,8 @@ interface AppState {
     background: boolean;
   };
   updateSubtitleStyle: (style: Partial<AppState['subtitleStyle']>) => void;
+  toast: { message: string; type: 'success' | 'info' | 'error' } | null;
+  showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -43,22 +45,9 @@ export const useStore = create<AppState>((set, get) => ({
     localStorage.setItem('myMovieLists', JSON.stringify(userLists));
     set({ userLists });
   },
-  addToList: (listName, movie) => set((state) => {
-    const list = state.userLists[listName] || [];
-    if (list.some((m) => m.id === movie.id)) return state;
-    const newLists = { ...state.userLists, [listName]: [...list, movie] };
-    localStorage.setItem('myMovieLists', JSON.stringify(newLists));
-    return { userLists: newLists };
-  }),
   removeFromList: (listName, movieId) => set((state) => {
     const list = state.userLists[listName] || [];
     const newLists = { ...state.userLists, [listName]: list.filter((m) => m.id !== movieId) };
-    localStorage.setItem('myMovieLists', JSON.stringify(newLists));
-    return { userLists: newLists };
-  }),
-  createList: (listName) => set((state) => {
-    if (state.userLists[listName]) return state;
-    const newLists = { ...state.userLists, [listName]: [] };
     localStorage.setItem('myMovieLists', JSON.stringify(newLists));
     return { userLists: newLists };
   }),
@@ -103,5 +92,33 @@ export const useStore = create<AppState>((set, get) => ({
     const newStyle = { ...state.subtitleStyle, ...style };
     localStorage.setItem('subtitleStyle', JSON.stringify(newStyle));
     return { subtitleStyle: newStyle };
+  }),
+  toast: null,
+  showToast: (message, type = 'info') => {
+    set({ toast: { message, type } });
+    setTimeout(() => {
+      set({ toast: null });
+    }, 3000);
+  },
+  addToList: (listName, movie) => set((state) => {
+    const list = state.userLists[listName] || [];
+    if (list.some((m) => m.id === movie.id)) {
+      get().showToast(`${movie.title || movie.name} is already in ${listName}`, 'info');
+      return state;
+    }
+    const newLists = { ...state.userLists, [listName]: [...list, movie] };
+    localStorage.setItem('myMovieLists', JSON.stringify(newLists));
+    get().showToast(`Added to ${listName}!`, 'success');
+    return { userLists: newLists };
+  }),
+  createList: (listName) => set((state) => {
+    if (state.userLists[listName]) {
+      get().showToast(`List "${listName}" already exists`, 'error');
+      return state;
+    }
+    const newLists = { ...state.userLists, [listName]: [] };
+    localStorage.setItem('myMovieLists', JSON.stringify(newLists));
+    get().showToast(`List "${listName}" created!`, 'success');
+    return { userLists: newLists };
   }),
 }));

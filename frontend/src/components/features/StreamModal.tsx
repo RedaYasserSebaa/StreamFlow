@@ -141,7 +141,7 @@ const StreamModal = () => {
 
   if (!selectedMovie) return null;
 
-  const selectClasses = "w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-accent-primary transition-all appearance-none cursor-pointer";
+  const selectClasses = "premium-select";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
