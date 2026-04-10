@@ -34,11 +34,11 @@
           "to": "/lib/systemd/system/streamflow.service"
         }
       ],
-      "synopsis": "Seamless torrent streaming and media management.",
-      "deb": {
-        "afterInstall": "package/linux/after-install.sh",
-        "beforeRemove": "package/linux/before-remove.sh"
-      }
+      "synopsis": "Seamless torrent streaming and media management."
+    },
+    "deb": {
+      "afterInstall": "package/linux/after-install.sh",
+      "beforeRemove": "package/linux/before-remove.sh"
     },
     "nsis": {
       "oneClick": true,
