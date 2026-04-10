@@ -133,6 +133,15 @@ app.post("/api/auth/login", async (req, res) => {
   });
 });
 
+app.delete("/api/auth/delete-me", authenticateToken, (req, res) => {
+  const userIndex = USERS.findIndex(u => u.id === req.user.id);
+  if (userIndex === -1) return res.status(404).json({ error: "User not found" });
+
+  USERS.splice(userIndex, 1);
+  saveUsers();
+  res.json({ success: true });
+});
+
 // User Data Sync Endpoints
 app.get("/api/user/data", authenticateToken, (req, res) => {
   const user = USERS.find(u => u.id === req.user.id);

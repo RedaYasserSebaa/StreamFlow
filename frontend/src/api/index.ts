@@ -49,6 +49,12 @@ export const fetchUserData = async (baseUrl: string, token: string) => {
   return response.data;
 };
 
+export const deleteCurrentUser = async (baseUrl: string, token: string) => {
+  const api = getBackendApi(baseUrl, token);
+  const response = await api.delete('/api/auth/delete-me');
+  return response.data;
+};
+
 // Helper for image paths
 export const getImagePath = (path: string, size: 'w500' | 'original' = 'w500') => 
   `https://image.tmdb.org/t/p/${size}${path}`;

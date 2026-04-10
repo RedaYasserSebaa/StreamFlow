@@ -5,10 +5,10 @@ import {
   AlertCircle, Loader2, User, Lock, UserPlus, LogIn, Mail
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { getBackendApi, loginUser, registerUser } from '../api';
+import { getBackendApi, loginUser, registerUser, deleteCurrentUser } from '../api';
 
 const Setup = () => {
-  const { config, setConfig, login, showToast, isAuthenticated } = useStore();
+  const { config, setConfig, login, logout, showToast, isAuthenticated } = useStore();
   const [step, setStep] = useState(1);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   
@@ -106,6 +106,24 @@ const Setup = () => {
       showToast('Failed to save configuration', 'error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleBack = async () => {
+    if (isAuthenticated() && step === 2) {
+      setIsLoading(true);
+      try {
+        await deleteCurrentUser(formData.backend_url, useStore.getState().user?.token || '');
+        logout();
+        setStep(1);
+        showToast('Account creation cancelled.', 'info');
+      } catch (err) {
+        showToast('Failed to cancel account creation.', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setStep(1);
     }
   };
 
@@ -372,19 +390,18 @@ const Setup = () => {
               </div>
 
               <div className="flex gap-4">
-                {!isAuthenticated() && (
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="flex-1 px-6 py-4 rounded-2xl bg-surface border border-white/5 text-sm font-bold text-muted hover:text-white transition-all"
-                  >
-                    Back
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={isLoading}
+                  className="flex-1 px-6 py-4 rounded-2xl bg-surface border border-white/10 text-sm font-bold text-muted hover:text-white transition-all disabled:opacity-50"
+                >
+                  Back
+                </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className={`${isAuthenticated() ? 'w-full' : 'flex-[2]'} bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50`}
+                  className="flex-[2] bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isLoading ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
                   Save Configuration
