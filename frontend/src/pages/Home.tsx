@@ -5,7 +5,7 @@ import type { Movie } from '../types';
 import MovieCard from '../components/features/MovieCard';
 
 const Home = () => {
-  const { config } = useStore();
+  const { config, continueWatching } = useStore();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -13,9 +13,10 @@ const Home = () => {
     if (config?.tmdb_api_key) {
       fetchHomeData(config.tmdb_api_key).then((res) => {
         setData(res);
-        setLoading(setLoading as any);
       }).catch(err => console.error(err))
       .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, [config]);
 
@@ -27,7 +28,7 @@ const Home = () => {
       </h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
         {movies.slice(0, 12).map((movie) => (
-          <MovieCard key={movie.id} movie={movie} onClick={(m) => console.log(m)} />
+          <MovieCard key={movie.id} movie={movie} onClick={() => {}} />
         ))}
       </div>
     </div>
@@ -42,7 +43,8 @@ const Home = () => {
   }
 
   return (
-    <div>
+    <div className="pb-12">
+      {continueWatching.length > 0 && renderRow('Continue Watching', continueWatching)}
       {data && (
         <>
           {renderRow('Trending This Week', data.trending)}

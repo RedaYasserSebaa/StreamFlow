@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Star, PlayCircle } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 import type { Movie } from '../../types';
 import { getImagePath } from '../../api';
 
@@ -10,6 +11,7 @@ interface MovieCardProps {
 }
 
 const MovieCard: React.FC<MovieCardProps> = ({ movie, onClick }) => {
+  const { setSelectedMovie } = useStore();
   const title = movie.title || movie.name;
   const releaseDate = movie.release_date || movie.first_air_date;
   const year = releaseDate ? releaseDate.split('-')[0] : 'N/A';
@@ -20,7 +22,10 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onClick }) => {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       className="group cursor-pointer relative"
-      onClick={() => onClick(movie)}
+      onClick={() => {
+        onClick(movie);
+        setSelectedMovie(movie);
+      }}
     >
       <div className="relative aspect-[2/3] rounded-2xl overflow-hidden shadow-lg border border-white/5 bg-surface/50">
         <img

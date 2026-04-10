@@ -1,15 +1,11 @@
-import React from 'react';
 import Sidebar from '../components/layout/Sidebar';
+import StreamModal from '../components/features/StreamModal';
 import { useStore } from '../store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search } from 'lucide-react';
 
-interface MainLayoutProps {
-  children: React.ReactNode;
-}
-
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const { searchQuery, setSearchQuery } = useStore();
+const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { searchQuery, setSearchQuery, selectedMovie } = useStore();
 
   return (
     <div className="flex bg-background min-h-screen">
@@ -25,7 +21,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-3xl font-bold tracking-tight"
               >
-                StreamFlow <span className="text-accent-primary">Next-Gen</span>
+                StreamFlow
               </motion.h1>
               <p className="text-muted text-sm mt-2">Discover and stream your favorite content instantly.</p>
             </div>
@@ -44,7 +40,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={children?.toString()} // Trigger animation on route change
+              key={window.location.pathname} // Better key than children.toString()
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -55,6 +51,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </AnimatePresence>
         </div>
       </main>
+
+      <AnimatePresence>
+        {selectedMovie && <StreamModal />}
+      </AnimatePresence>
     </div>
   );
 };

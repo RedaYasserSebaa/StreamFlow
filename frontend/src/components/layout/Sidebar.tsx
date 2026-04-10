@@ -45,7 +45,12 @@ const Sidebar = () => {
         })}
       </div>
 
-      <button className="p-3 text-muted hover:text-accent-danger transition-colors group relative">
+      <button 
+        onClick={() => setCurrentView('settings')}
+        className={`p-3 transition-colors group relative ${
+          currentView === 'settings' ? 'bg-accent-primary text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'text-muted hover:text-white hover:bg-white/5'
+        } rounded-xl`}
+      >
         <Settings size={24} />
         <span className="absolute left-full ml-4 px-2 py-1 bg-surface border border-white/10 rounded-md text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
           Settings

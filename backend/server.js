@@ -45,13 +45,14 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static frontend files
-const distPath = path.join(__dirname, "frontend/dist");
+const distPath = path.join(__dirname, "../frontend/dist");
 if (fs.existsSync(distPath)) {
   console.log("Serving frontend from /frontend/dist");
   app.use(express.static(distPath));
 } else {
-  console.log("Serving frontend from root (Legacy)");
-  app.use(express.static(__dirname));
+  console.log("Serving frontend from legacy folder");
+  const legacyPath = path.join(__dirname, "../legacy");
+  app.use(express.static(legacyPath));
 }
 
 // Function to search real torrents using Jackett

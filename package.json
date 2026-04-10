@@ -1,6 +1,6 @@
 {
   "name": "streamflow-app",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "StreamFlow: A seamless torrent streaming and media management application.",
   "main": "main.js",
   "bin": {
@@ -8,10 +8,11 @@
   },
   "scripts": {
     "start": "electron .",
+    "server": "node backend/server.js",
     "build": "electron-builder --win",
     "build:linux": "electron-builder --linux",
-    "frontend:dev": "cd frontend; npm run dev",
-    "frontend:build": "cd frontend; npm run build",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "build": {
