@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search } from 'lucide-react';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { searchQuery, setSearchQuery, selectedMovie, toast } = useStore();
+  const { searchQuery, setSearchQuery, selectedMovie, toast, setCurrentView } = useStore();
 
   return (
     <div className="flex bg-background min-h-screen">
@@ -15,11 +15,14 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="w-full px-6 md:px-10">
           {/* ... existing header code ... */}
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-            <div>
+            <div 
+              className="cursor-pointer group"
+              onClick={() => { setCurrentView('home'); setSearchQuery(''); }}
+            >
               <motion.h1 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-3xl font-bold tracking-tight"
+                className="text-3xl font-bold tracking-tight text-[#3f83f2] group-hover:opacity-80 transition-opacity"
               >
                 StreamFlow
               </motion.h1>
