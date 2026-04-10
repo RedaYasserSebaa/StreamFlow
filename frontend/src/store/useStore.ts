@@ -143,7 +143,8 @@ export const useStore = create<AppState>((set, get) => ({
   isConfigured: () => {
     const config = get().config;
     const user = get().user;
-    return !!(user && config && config.tmdb_api_key && config.jackett_api_key);
+    // Strictly wait for the setup_complete flag to be true
+    return !!(user && config && config.setup_complete);
   },
 
   isAuthenticated: () => {

@@ -32,7 +32,7 @@ function App() {
       case 'lists':
         return <MyLists />;
       case 'settings':
-        return <Setup />;
+        return <div className="p-8 text-center text-muted italic">Settings content removed as requested.</div>;
       default:
         return <Home />;
     }

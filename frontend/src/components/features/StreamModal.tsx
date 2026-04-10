@@ -20,6 +20,7 @@ const StreamModal = () => {
   // Filter States
   const [qualityFilter, setQualityFilter] = useState('all');
   const [indexerFilter, setIndexerFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState<'streams' | 'local'>('streams');
 
   // Subtitle States
   const [customSubtitles, setCustomSubtitles] = useState<{ src: string; label: string }[]>([]);
@@ -79,7 +80,15 @@ const StreamModal = () => {
 
   const handlePlay = (torrent: Torrent) => {
     if (!config?.backend_url) return;
-    const url = `${config.backend_url}/api/stream?magnet=${encodeURIComponent(torrent.magnet)}&indexer=${encodeURIComponent(torrent.indexer || '')}`;
+    
+    let url = '';
+    if (torrent.isLocal && torrent.magnet.startsWith('local://')) {
+      const filePath = torrent.magnet.replace('local://', '');
+      url = `${config.backend_url}/api/stream/local?path=${encodeURIComponent(filePath)}`;
+    } else {
+      url = `${config.backend_url}/api/stream?magnet=${encodeURIComponent(torrent.magnet)}&indexer=${encodeURIComponent(torrent.indexer || '')}`;
+    }
+
     setStreamUrl(url);
     setIsBuffering(true);
     
@@ -87,16 +96,20 @@ const StreamModal = () => {
       addToContinueWatching(selectedMovie);
     }
 
-    // Start stats interval
+    // Start stats interval (only for torrents)
     if (statsInterval.current) clearInterval(statsInterval.current);
-    statsInterval.current = setInterval(async () => {
-      try {
-        const s = await fetchStreamStats(config.backend_url, torrent.magnet);
-        setStats(s);
-      } catch (e) {
-        console.error(e);
-      }
-    }, 2000);
+    if (!torrent.isLocal) {
+      statsInterval.current = setInterval(async () => {
+        try {
+          const s = await fetchStreamStats(config.backend_url, torrent.magnet);
+          setStats(s);
+        } catch (e) {
+          console.error(e);
+        }
+      }, 2000);
+    } else {
+      setStats(null); // Clear stats for local playback
+    }
   };
 
   const handleSubtitleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,7 +149,8 @@ const StreamModal = () => {
   const filteredTorrents = torrents.filter(t => {
     const qMatch = qualityFilter === 'all' || getQuality(t.title) === qualityFilter;
     const iMatch = indexerFilter === 'all' || t.indexer === indexerFilter;
-    return qMatch && iMatch;
+    const tMatch = (activeTab === 'local' && t.isLocal) || (activeTab === 'streams' && !t.isLocal);
+    return qMatch && iMatch && tMatch;
   });
 
   if (!selectedMovie) return null;
@@ -337,9 +351,30 @@ const StreamModal = () => {
 
         {/* MIDDLE PANE: STREAMS (20%) */}
         <div className="w-full md:w-[35%] lg:w-[20%] h-full border-x border-white/5 bg-white/[0.02] p-6 overflow-y-auto flex flex-col gap-6 custom-scrollbar">
-          <div className="flex items-center gap-2 text-white font-bold text-sm border-b border-white/5 pb-4">
-            <PlayCircle size={18} className="text-accent-primary" />
-            AVAILABLE STREAMS
+          <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 relative">
+            <button 
+              onClick={() => setActiveTab('streams')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg z-10 ${activeTab === 'streams' ? 'text-white' : 'text-muted hover:text-white'}`}
+            >
+              <PlayCircle size={14} />
+              Streams
+            </button>
+            <button 
+              onClick={() => setActiveTab('local')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg z-10 ${activeTab === 'local' ? 'text-white' : 'text-muted hover:text-white'}`}
+            >
+              <HardDrive size={14} />
+              Local
+            </button>
+            <motion.div 
+              className="absolute inset-y-1 bg-gradient-premium rounded-lg shadow-lg"
+              initial={false}
+              animate={{ 
+                left: activeTab === 'streams' ? '4px' : '50%',
+                right: activeTab === 'streams' ? '50%' : '4px'
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            />
           </div>
 
           {/* TV Selectors */}

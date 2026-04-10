@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Key, Server, CheckCircle, Network, ChevronRight, 
-  AlertCircle, Loader2, User, Lock, UserPlus, LogIn, Mail
+  AlertCircle, Loader2, User, Lock, UserPlus, LogIn, HardDrive
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { getBackendApi, loginUser, registerUser } from '../api';
+import { getBackendApi, loginUser, registerUser, deleteCurrentUser } from '../api';
 
 const Setup = () => {
-  const { config, setConfig, login, showToast, isAuthenticated } = useStore();
+  const { config, setConfig, login, logout, showToast, isAuthenticated, user } = useStore();
   const [step, setStep] = useState(1);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   
@@ -24,7 +24,10 @@ const Setup = () => {
     jackett_ip: config?.jackett_ip || 'localhost',
     jackett_port: config?.jackett_port || 9117,
     backend_url: config?.backend_url || window.location.origin,
-    subtitle_api_key: config?.subtitle_api_key || ''
+    subtitle_api_key: config?.subtitle_api_key || '',
+    movies_path: config?.movies_path || '',
+    tv_shows_path: config?.tv_shows_path || '',
+    setup_complete: config?.setup_complete || false
   });
 
   const [testStatus, setTestStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error', message: string }>({
@@ -36,10 +39,10 @@ const Setup = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (isAuthenticated() && step === 1) {
       setStep(2);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, step]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,14 +97,44 @@ const Setup = () => {
     }
   };
 
+  const handleBackToAuth = async () => {
+    if (isAuthenticated()) {
+      try {
+        setIsLoading(true);
+        if (user?.token) {
+          await deleteCurrentUser(formData.backend_url, user.token);
+        }
+        logout();
+        showToast('Account deleted and logged out.', 'info');
+      } catch (err) {
+        console.error('Failed to delete account:', err);
+        logout(); // Ensure we still logout even if delete fails
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    setStep(1);
+  };
+
   const handleConfigSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const api = getBackendApi(formData.backend_url);
-      await api.post('/api/config', formData);
-      setConfig(formData);
-      showToast('Configuration saved successfully!', 'success');
+      
+      const configToSave = {
+        ...formData,
+        setup_complete: step === 3
+      };
+
+      await api.post('/api/config', configToSave);
+      setConfig(configToSave);
+      
+      if (step === 2) {
+        setStep(3);
+      } else {
+        showToast('Configuration saved successfully!', 'success');
+      }
     } catch (err) {
       showToast('Failed to save configuration', 'error');
     } finally {
@@ -125,12 +158,14 @@ const Setup = () => {
             <img src="/favicon.png" alt="Logo" className="w-16 h-16 mx-auto drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
           </div>
           <h1 className="text-3xl font-bold">
-            {step === 1 ? 'Welcome to StreamFlow' : 'Service Configuration'}
+            {step === 1 ? 'Welcome to StreamFlow' : step === 2 ? 'Service Configuration' : 'Local Media Setup'}
           </h1>
           <p className="text-muted mt-2">
             {step === 1 
-              ? authMode === 'signup' ? 'Create an account to get started' : 'Login to your existing account'
-              : 'Configure your API keys and media services'}
+              ? (authMode === 'signup' ? 'Create an account to get started' : 'Login to your existing account')
+              : step === 2 
+                ? 'Configure your API keys and media services'
+                : 'Connect your local movie and TV show folders'}
           </p>
         </div>
 
@@ -139,6 +174,7 @@ const Setup = () => {
           <div className="flex items-center justify-center gap-2 mb-10">
             <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
             <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
+            <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 3 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
           </div>
         )}
 
@@ -218,7 +254,7 @@ const Setup = () => {
                 </p>
               </div>
             </motion.form>
-          ) : (
+          ) : step === 2 ? (
             <motion.form 
               key="config-step"
               initial={{ x: -20, opacity: 0 }}
@@ -315,27 +351,6 @@ const Setup = () => {
                 </div>
               </section>
 
-              {/* Subtitle Section (Optional) */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 text-accent-secondary font-semibold text-sm">
-                  <Mail size={16} />
-                  SUBTITLE API (OPTIONAL)
-                </div>
-                <div className="space-y-2">
-                  <input
-                    type="password"
-                    placeholder="Enter Subtitle API key (optional)"
-                    className={inputClasses}
-                    value={formData.subtitle_api_key}
-                    onChange={(e) => setFormData({...formData, subtitle_api_key: e.target.value})}
-                  />
-                  <p className="text-[10px] text-muted flex items-center gap-1 px-1">
-                    <AlertCircle size={10} />
-                    This feature will be implemented in a future update.
-                  </p>
-                </div>
-              </section>
-
               {/* Advanced Section */}
               <div className="pt-2 border-t border-white/5">
                 <button
@@ -373,12 +388,84 @@ const Setup = () => {
 
               <div className="flex gap-4">
                 <button
+                  type="button"
+                  onClick={handleBackToAuth}
+                  className="flex-1 px-6 py-4 rounded-2xl bg-surface border border-white/10 text-sm font-bold text-muted hover:text-white transition-all shadow-lg flex items-center justify-center gap-2"
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : 'Back'}
+                </button>
+                <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-[2] bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isLoading ? <Loader2 size={20} className="animate-spin" /> : <ChevronRight size={20} />}
+                  Next Step
+                </button>
+              </div>
+            </motion.form>
+          ) : (
+            <motion.form 
+              key="local-media-step"
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 20, opacity: 0 }}
+              onSubmit={handleConfigSubmit} 
+              className="space-y-8"
+            >
+              <section className="space-y-6">
+                <div className="flex items-center gap-2 text-accent-secondary font-semibold text-sm">
+                  <HardDrive size={18} className="text-accent-secondary" />
+                  LOCAL LIBRARIES
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-wider px-1">Movies Folder Path</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. C:\Videos\Movies"
+                      className={inputClasses}
+                      value={formData.movies_path}
+                      onChange={(e) => setFormData({...formData, movies_path: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-wider px-1">TV Shows Folder Path</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. C:\Videos\TV Shows"
+                      className={inputClasses}
+                      value={formData.tv_shows_path}
+                      onChange={(e) => setFormData({...formData, tv_shows_path: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2 text-xs text-muted leading-relaxed">
+                  <p className="flex items-center gap-2 font-bold text-white/50">
+                    <AlertCircle size={14} /> HOW IT WORKS
+                  </p>
+                  <p>StreamFlow will scan these folders when you open a movie or show. If a matching file is found, it will appear as the first option in the stream modal.</p>
+                </div>
+              </section>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="flex-1 px-6 py-4 rounded-2xl bg-surface border border-white/10 text-sm font-bold text-muted hover:text-white transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-[2] bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isLoading ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
-                  Save Configuration
+                  Complete Setup
                 </button>
               </div>
             </motion.form>

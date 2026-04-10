@@ -51,11 +51,22 @@ const TorrentList = ({ torrents, onSelect, loading }: TorrentListProps) => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.05 }}
             onClick={() => onSelect(torrent)}
-            className="p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-accent-primary/10 hover:border-accent-primary/30 transition-all flex items-center justify-between group"
+            className={`p-4 border rounded-xl cursor-pointer transition-all flex items-center justify-between group ${
+              torrent.isLocal 
+                ? 'bg-accent-primary/10 border-accent-primary/40 hover:bg-accent-primary/20' 
+                : 'bg-white/5 border-white/10 hover:bg-accent-primary/10 hover:border-accent-primary/30'
+            }`}
           >
             <div className="flex-1 min-w-0 pr-4">
-              <div className="font-semibold text-sm truncate text-white group-hover:text-accent-primary transition-colors mb-2">
-                {torrent.title}
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`font-semibold text-sm truncate ${torrent.isLocal ? 'text-accent-primary' : 'text-white group-hover:text-accent-primary'} transition-colors`}>
+                  {torrent.isLocal ? torrent.title.replace('[LOCAL] ', '') : torrent.title}
+                </div>
+                {torrent.isLocal && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-accent-primary text-[8px] font-black text-white uppercase tracking-tighter">
+                    Verified
+                  </span>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xl font-bold text-accent-secondary">
@@ -65,29 +76,35 @@ const TorrentList = ({ torrents, onSelect, loading }: TorrentListProps) => {
                   {quality}
                 </span>
                 {torrent.indexer && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold text-white bg-pink-500 uppercase">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase ${torrent.isLocal ? 'bg-accent-primary' : 'bg-pink-500'}`}>
                     {torrent.indexer}
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-accent-secondary text-xs font-semibold">
-                  <ArrowUp size={12} /> {torrent.seeders}
-                </span>
-                <span className="flex items-center gap-1 text-accent-danger text-xs font-semibold">
-                  <ArrowDown size={12} /> {torrent.leechers}
-                </span>
+                {!torrent.isLocal && (
+                  <>
+                    <span className="flex items-center gap-1 text-accent-secondary text-xs font-semibold">
+                      <ArrowUp size={12} /> {torrent.seeders}
+                    </span>
+                    <span className="flex items-center gap-1 text-accent-danger text-xs font-semibold">
+                      <ArrowDown size={12} /> {torrent.leechers}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             
             <div className="flex items-center gap-3">
-              <a 
-                href={torrent.magnet} 
-                onClick={(e) => e.stopPropagation()}
-                className="text-muted hover:text-accent-danger transition-colors"
-                title="Magnet Link"
-              >
-                <Magnet size={20} />
-              </a>
-              <PlayCircle size={32} className="text-accent-primary group-hover:scale-110 transition-transform" />
+              {!torrent.isLocal && (
+                <a 
+                  href={torrent.magnet} 
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-muted hover:text-accent-danger transition-colors"
+                  title="Magnet Link"
+                >
+                  <Magnet size={20} />
+                </a>
+              )}
+              <PlayCircle size={32} className={`${torrent.isLocal ? 'text-accent-primary' : 'text-accent-primary/70'} group-hover:text-accent-primary group-hover:scale-110 transition-transform`} />
             </div>
           </motion.div>
         );

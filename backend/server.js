@@ -44,6 +44,8 @@ let CONFIG = {
   jackett_ip: process.env.JACKETT_IP || "localhost",
   jackett_port: process.env.JACKETT_PORT || 9117,
   backend_url: process.env.BACKEND_URL || "http://localhost:7676",
+  movies_path: process.env.MOVIES_PATH || null,
+  tv_shows_path: process.env.TV_SHOWS_PATH || null,
 };
 
 // Load saved configuration
@@ -65,6 +67,92 @@ function saveConfig() {
   } catch (error) {
     console.error("Could not save config:", error.message);
   }
+}
+
+// Local Media Utilities
+function parseLocalFilename(filename) {
+  const cleanName = filename.replace(/\.(mp4|mkv|avi|mov|webm)$/i, "").replace(/[._]/g, " ");
+  
+  // Try TV show pattern S01E01 or 1x01
+  const tvMatch = cleanName.match(/(.+?)\s*S(\d+)\s*E(\d+)/i) || cleanName.match(/(.+?)\s*(\d+)x(\d+)/i);
+  if (tvMatch) {
+    return {
+      type: "tv",
+      title: tvMatch[1].trim(),
+      season: parseInt(tvMatch[2]),
+      episode: parseInt(tvMatch[3])
+    };
+  }
+
+  // Try Movie pattern (Year)
+  const movieMatch = cleanName.match(/(.+?)\s*\(?((?:19|20)\d{2})\)?/i);
+  if (movieMatch) {
+    return {
+      type: "movie",
+      title: movieMatch[1].trim(),
+      year: parseInt(movieMatch[2])
+    };
+  }
+
+  return { type: "unknown", title: cleanName.trim() };
+}
+
+function findMediaFiles(dir, files = []) {
+  if (!dir || !fs.existsSync(dir)) return files;
+  
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const res = path.resolve(dir, entry.name);
+    if (entry.isDirectory()) {
+      findMediaFiles(res, files);
+    } else if (/\.(mp4|mkv|avi|mov|webm)$/i.test(entry.name)) {
+      files.push({
+        name: entry.name,
+        path: res,
+        size: fs.statSync(res).size
+      });
+    }
+  }
+  return files;
+}
+
+function findLocalMatch(searchTitle, type, season = null, episode = null) {
+  const rootDir = type === "movie" ? CONFIG.movies_path : CONFIG.tv_shows_path;
+  if (!rootDir) return null;
+
+  const allFiles = findMediaFiles(rootDir);
+  const normalizedSearch = searchTitle.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  for (const file of allFiles) {
+    const info = parseLocalFilename(file.name);
+    if (info.type === "unknown") {
+      // Fallback: direct title match in filename
+      const normalizedFile = file.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (normalizedFile.includes(normalizedSearch)) {
+        if (type === "tv" && season !== null && episode !== null) {
+          const epStr = `s${season.toString().padStart(2, "0")}e${episode.toString().padStart(2, "0")}`;
+          if (normalizedFile.includes(epStr)) return file;
+        } else if (type === "movie") {
+          return file;
+        }
+      }
+      continue;
+    }
+
+    if (info.type !== type) continue;
+    
+    const normalizedInfoTitle = info.title.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (normalizedSearch.includes(normalizedInfoTitle) || normalizedInfoTitle.includes(normalizedSearch)) {
+      if (type === "tv") {
+        if (info.season === parseInt(season) && info.episode === parseInt(episode)) {
+          return file;
+        }
+      } else {
+        return file;
+      }
+    }
+  }
+  return null;
 }
 app.use(cors());
 app.use(express.json());
@@ -478,7 +566,9 @@ app.post("/api/config", (req, res) => {
     jackett_api_key, 
     jackett_ip, 
     jackett_port,
-    backend_url
+    backend_url,
+    movies_path,
+    tv_shows_path
   } = req.body;
 
   // Update config with provided values
@@ -487,6 +577,9 @@ app.post("/api/config", (req, res) => {
   if (jackett_ip) CONFIG.jackett_ip = jackett_ip;
   if (jackett_port) CONFIG.jackett_port = jackett_port;
   if (backend_url) CONFIG.backend_url = backend_url;
+  if (movies_path !== undefined) CONFIG.movies_path = movies_path;
+  if (tv_shows_path !== undefined) CONFIG.tv_shows_path = tv_shows_path;
+  if (req.body.hasOwnProperty('setup_complete')) CONFIG.setup_complete = req.body.setup_complete;
 
   // Save configuration to file
   saveConfig();
@@ -499,6 +592,9 @@ app.post("/api/config", (req, res) => {
       jackett_api_key: CONFIG.jackett_api_key ? "***configured***" : "Not set",
       jackett_ip: CONFIG.jackett_ip,
       jackett_port: CONFIG.jackett_port,
+      movies_path: CONFIG.movies_path,
+      tv_shows_path: CONFIG.tv_shows_path,
+      setup_complete: CONFIG.setup_complete,
     },
   });
 });
@@ -515,16 +611,37 @@ app.post("/api/search", async (req, res) => {
   try {
     const mediaType = type || 'movie';
     const results = await searchTorrentMagnetLinks(searchTitle, mediaType, seasonEpi || '');
+    
+    // Check for local media
+    const localFile = findLocalMatch(searchTitle, mediaType, 
+      seasonEpi ? parseInt(seasonEpi.match(/S(\d+)/i)?.[1] || "1") : null,
+      seasonEpi ? parseInt(seasonEpi.match(/E(\d+)/i)?.[1] || "1") : null
+    );
+
+    const mappedResults = results.map((r) => ({
+      title: r.title,
+      seeders: r.seeders,
+      leechers: r.leechers,
+      magnet: r.magnet,
+      size: r.size || 0,
+      indexer: r.indexer
+    }));
+
+    if (localFile) {
+      mappedResults.unshift({
+        title: `[LOCAL] ${localFile.name}`,
+        seeders: 9999,
+        leechers: 0,
+        magnet: `local://${localFile.path}`,
+        size: localFile.size,
+        indexer: "Local Storage",
+        isLocal: true
+      });
+    }
+
     res.json({
       success: true,
-      results: results.map((r) => ({
-        title: r.title,
-        seeders: r.seeders,
-        leechers: r.leechers,
-        magnet: r.magnet,
-        size: r.size || 0,
-        indexer: r.indexer
-      })),
+      results: mappedResults,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -600,6 +717,49 @@ app.get("/api/stream", async (req, res) => {
 
     const stream = file.createReadStream();
     stream.pipe(res);
+  }
+});
+
+// Local Stream Endpoint
+app.get("/api/stream/local", (req, res) => {
+  const filePath = req.query.path;
+  if (!filePath || !fs.existsSync(filePath)) {
+    return res.status(404).send("File not found");
+  }
+
+  // Security check: path must be within movies_path or tv_shows_path
+  const isAllowed = (CONFIG.movies_path && filePath.startsWith(path.resolve(CONFIG.movies_path))) ||
+                    (CONFIG.tv_shows_path && filePath.startsWith(path.resolve(CONFIG.tv_shows_path)));
+  
+  if (!isAllowed) {
+    return res.status(403).send("Access denied");
+  }
+
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+  const range = req.headers.range;
+
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const chunksize = (end - start) + 1;
+    const file = fs.createReadStream(filePath, { start, end });
+    const head = {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunksize,
+      'Content-Type': 'video/mp4',
+    };
+    res.writeHead(206, head);
+    file.pipe(res);
+  } else {
+    const head = {
+      'Content-Length': fileSize,
+      'Content-Type': 'video/mp4',
+    };
+    res.writeHead(200, head);
+    fs.createReadStream(filePath).pipe(res);
   }
 });
 

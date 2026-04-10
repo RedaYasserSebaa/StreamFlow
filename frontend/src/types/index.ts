@@ -20,6 +20,7 @@ export interface Torrent {
   magnet: string;
   size: number;
   indexer: string;
+  isLocal?: boolean;
 }
 
 export interface UserConfig {
@@ -29,6 +30,9 @@ export interface UserConfig {
   jackett_port: number;
   backend_url: string;
   subtitle_api_key?: string;
+  movies_path?: string;
+  tv_shows_path?: string;
+  setup_complete?: boolean;
 }
 
 export interface User {
