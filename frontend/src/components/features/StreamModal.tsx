@@ -16,6 +16,10 @@ const StreamModal = () => {
   const [stats, setStats] = useState<any>(null);
   const [selectedList, setSelectedList] = useState('');
   const [isBuffering, setIsBuffering] = useState(false);
+  
+  // Filter States
+  const [qualityFilter, setQualityFilter] = useState('all');
+  const [indexerFilter, setIndexerFilter] = useState('all');
 
   // TV State
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
@@ -96,6 +100,18 @@ const StreamModal = () => {
     return `${speed} B/s`;
   };
 
+  // Derived Filter Data
+  const getQuality = (title: string) => title.match(/2160p|4K|1080p|720p|480p/i)?.[0] || 'SD';
+  
+  const availableQualities = Array.from(new Set(torrents.map(t => getQuality(t.title))));
+  const availableIndexers = Array.from(new Set(torrents.map(t => t.indexer).filter(Boolean)));
+
+  const filteredTorrents = torrents.filter(t => {
+    const qMatch = qualityFilter === 'all' || getQuality(t.title) === qualityFilter;
+    const iMatch = indexerFilter === 'all' || t.indexer === indexerFilter;
+    return qMatch && iMatch;
+  });
+
   if (!selectedMovie) return null;
 
   const selectClasses = "w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-xs focus:outline-none focus:border-accent-primary transition-all appearance-none cursor-pointer";
@@ -114,7 +130,7 @@ const StreamModal = () => {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative w-full max-w-7xl h-[90vh] glass rounded-[2.5rem] overflow-hidden flex flex-col md:flex-row border border-white/10 shadow-2xl"
+        className="relative w-full max-w-[98vw] lg:max-w-[1600px] h-[92vh] glass rounded-[2.5rem] overflow-hidden flex flex-col md:flex-row border border-white/10 shadow-2xl"
       >
         <button 
           onClick={() => setSelectedMovie(null)}
@@ -188,8 +204,8 @@ const StreamModal = () => {
           )}
         </div>
 
-        {/* MIDDLE PANE: STREAMS (25%) */}
-        <div className="w-full md:w-[30%] lg:w-[25%] h-full border-x border-white/5 bg-white/[0.02] p-6 overflow-y-auto flex flex-col gap-6 custom-scrollbar">
+        {/* MIDDLE PANE: STREAMS (20%) */}
+        <div className="w-full md:w-[35%] lg:w-[20%] h-full border-x border-white/5 bg-white/[0.02] p-6 overflow-y-auto flex flex-col gap-6 custom-scrollbar">
           <div className="flex items-center gap-2 text-white font-bold text-sm border-b border-white/5 pb-4">
             <PlayCircle size={18} className="text-accent-primary" />
             AVAILABLE STREAMS
@@ -238,11 +254,39 @@ const StreamModal = () => {
             FIND STREAMS
           </button>
 
-          <TorrentList torrents={torrents} onSelect={handlePlay} loading={loadingTorrents} />
+          {/* Filters UI */}
+          {torrents.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 animate-in fade-in duration-500">
+              <div className="space-y-1">
+                <label className="text-[9px] text-muted uppercase tracking-widest font-bold px-1">Quality</label>
+                <select 
+                  value={qualityFilter}
+                  onChange={(e) => setQualityFilter(e.target.value)}
+                  className={selectClasses}
+                >
+                  <option value="all">All</option>
+                  {availableQualities.map(q => <option key={q} value={q}>{q}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] text-muted uppercase tracking-widest font-bold px-1">Indexer</label>
+                <select 
+                  value={indexerFilter}
+                  onChange={(e) => setIndexerFilter(e.target.value)}
+                  className={selectClasses}
+                >
+                  <option value="all">All</option>
+                  {availableIndexers.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+
+          <TorrentList torrents={filteredTorrents} onSelect={handlePlay} loading={loadingTorrents} />
         </div>
 
-        {/* RIGHT PANE: INFO (25%) */}
-        <div className="hidden lg:flex lg:w-[25%] h-full p-8 flex-col gap-8 bg-white/[0.04]">
+        {/* RIGHT PANE: INFO (20%) */}
+        <div className="hidden lg:flex lg:w-[20%] h-full p-8 flex-col gap-8 bg-white/[0.04]">
           <div className="space-y-4">
             <h2 className="text-2xl font-black leading-tight text-white">{selectedMovie.title || selectedMovie.name}</h2>
             <div className="flex flex-wrap items-center gap-3">
