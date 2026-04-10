@@ -11,7 +11,8 @@ const torrentStream = require("torrent-stream");
 const app = express();
 
 // Load or create configuration
-const CONFIG_FILE = path.join(__dirname, "config.json");
+const CONFIG_DIR = process.env.STREAMFLOW_CONFIG_DIR || __dirname;
+const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
 let CONFIG = {
   tmdb_api_key: process.env.TMDB_API_KEY || null,
   jackett_api_key: process.env.JACKETT_API_KEY || null,

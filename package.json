@@ -27,7 +27,17 @@
     },
     "linux": {
       "target": "deb",
-      "category": "Video"
+      "category": "Video",
+      "extraFiles": [
+        {
+          "from": "package/linux/streamflow.service",
+          "to": "/lib/systemd/system/streamflow.service"
+        }
+      ],
+      "scripts": {
+        "afterInstall": "package/linux/after-install.sh",
+        "beforeRemove": "package/linux/before-remove.sh"
+      }
     },
     "nsis": {
       "oneClick": true,

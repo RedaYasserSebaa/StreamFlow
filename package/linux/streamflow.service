@@ -1,0 +1,16 @@
+[Unit]
+Description=StreamFlow Media Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/StreamFlow/resources/app
+# Use the bundled electron to run the server
+ExecStart=/opt/StreamFlow/streamflow-app --no-sandbox server.js
+Restart=on-failure
+StandardOutput=append:/var/log/streamflow.log
+StandardError=append:/var/log/streamflow.log
+
+[Install]
+WantedBy=multi-user.target
