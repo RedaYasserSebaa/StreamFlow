@@ -13,6 +13,7 @@ winCodeSign.7z
 # Environment and secrets
 .env
 config.json
+users.json
 
 
 SECURITY.md
