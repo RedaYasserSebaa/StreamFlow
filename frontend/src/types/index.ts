@@ -11,6 +11,9 @@ export interface Movie {
   media_type: 'movie' | 'tv';
   number_of_seasons?: number;
   number_of_episodes?: number;
+  isLocal?: boolean;
+  localPath?: string;
+  localId?: string;
 }
 
 export interface Torrent {

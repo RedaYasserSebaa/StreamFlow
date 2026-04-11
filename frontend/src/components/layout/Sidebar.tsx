@@ -1,4 +1,4 @@
-import { Home, Compass, List, Settings, LogOut } from 'lucide-react';
+import { Home, Compass, List, Settings, LogOut, HardDrive } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { motion } from 'framer-motion';
 
@@ -9,6 +9,7 @@ const Sidebar = () => {
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'discover', icon: Compass, label: 'Discover' },
     { id: 'lists', icon: List, label: 'My Lists' },
+    { id: 'offline', icon: HardDrive, label: 'Offline Mode' },
   ];
 
   const handleNav = (id: any) => {

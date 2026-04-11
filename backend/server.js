@@ -114,6 +114,81 @@ function parseLocalFilename(filename) {
   return { type: "unknown", title: cleanName };
 }
 
+// In-memory cache for local media metadata (keyed by userId)
+const localMediaCache = new Map();
+
+async function scanDirectory(dir, type) {
+  let results = [];
+  try {
+    const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        results = results.concat(await scanDirectory(fullPath, type));
+      } else if (entry.isFile() && /\.(mp4|mkv|avi|mov|webm|m4v|ts|flv)$/i.test(entry.name)) {
+        const parsed = parseLocalFilename(entry.name);
+        results.push({
+          ...parsed,
+          type: type || parsed.type,
+          filename: entry.name,
+          localPath: fullPath,
+          size: (await fs.promises.stat(fullPath)).size
+        });
+      }
+    }
+  } catch (err) {
+    console.error(`Error scanning ${dir}:`, err.message);
+  }
+  return results;
+}
+
+async function enrichWithTMDB(items) {
+  if (!CONFIG.tmdb_api_key) return items;
+
+  const enriched = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    try {
+      const searchType = item.type === "tv" ? "tv" : "movie";
+      const yearParam = item.type === "tv" ? "first_air_date_year" : "primary_release_year";
+      
+      const url = `https://api.themoviedb.org/3/search/${searchType}?api_key=${CONFIG.tmdb_api_key}&query=${encodeURIComponent(item.title)}${item.year ? `&${yearParam}=${item.year}` : ""}`;
+      
+      const response = await got(url).json();
+      const match = response.results && response.results[0];
+
+      if (match) {
+        enriched.push({
+          ...item,
+          id: match.id,
+          title: match.title || match.name,
+          name: match.name,
+          overview: match.overview,
+          poster_path: match.poster_path,
+          backdrop_path: match.backdrop_path,
+          vote_average: match.vote_average,
+          release_date: match.release_date || match.first_air_date,
+          media_type: item.type,
+          isLocal: true,
+          localId: `local_${match.id}_${Buffer.from(item.localPath).toString('base64').slice(-8)}`
+        });
+      } else {
+        enriched.push({ 
+          ...item, 
+          isLocal: true, 
+          localId: `local_${Buffer.from(item.localPath).toString('base64').slice(-12)}` 
+        });
+      }
+      
+      await new Promise(r => setTimeout(r, 50));
+    } catch (err) {
+      console.error(`TMDB enrichment failed for ${item.title}:`, err.message);
+      enriched.push({ ...item, isLocal: true });
+    }
+  }
+  return enriched;
+}
+
 function findMediaFiles(dir, files = []) {
   if (!dir || !fs.existsSync(dir)) return files;
   
@@ -207,6 +282,37 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+// Routes for Local Media - Secure with authenticateToken
+app.get("/api/local", authenticateToken, async (req, res) => {
+  const user = USERS.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const forceRefresh = req.query.refresh === 'true';
+  const now = Date.now();
+  const cacheKey = user.id;
+  const userCache = localMediaCache.get(cacheKey) || { data: [], lastScan: 0 };
+  
+  if (!forceRefresh && userCache.data.length > 0 && (now - userCache.lastScan) < 300000) {
+    return res.json({ success: true, results: userCache.data, cached: true });
+  }
+
+  const moviesDir = user.config?.movies_path;
+  const tvDir = user.config?.tv_shows_path;
+
+  let allFiles = [];
+  if (moviesDir) allFiles = allFiles.concat(await scanDirectory(moviesDir, "movie"));
+  if (tvDir) allFiles = allFiles.concat(await scanDirectory(tvDir, "tv"));
+
+  const enrichedData = await enrichWithTMDB(allFiles);
+  
+  localMediaCache.set(cacheKey, {
+    data: enrichedData,
+    lastScan: now
+  });
+
+  res.json({ success: true, results: enrichedData });
+});
 
 // Auth Endpoints
 app.post("/api/auth/register", async (req, res) => {
