@@ -246,6 +246,25 @@ app.post("/api/auth/login", async (req, res) => {
   });
 });
 
+app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: "Missing fields" });
+
+  const user = USERS.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) return res.status(400).json({ error: "Incorrect current password" });
+
+  try {
+    user.password = await bcrypt.hash(newPassword, 10);
+    saveUsers();
+    res.json({ success: true, message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 app.delete("/api/auth/delete-me", authenticateToken, (req, res) => {
   const userIndex = USERS.findIndex(u => u.id === req.user.id);
   if (userIndex === -1) return res.status(404).json({ error: "User not found" });

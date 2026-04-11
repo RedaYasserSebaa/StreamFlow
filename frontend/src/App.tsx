@@ -2,6 +2,7 @@ import Home from './pages/Home';
 import Setup from './pages/Setup';
 import Discover from './pages/Discover';
 import MyLists from './pages/MyLists';
+import Settings from './pages/Settings';
 import SearchResults from './pages/SearchResults';
 import MainLayout from './layout/MainLayout';
 import { useStore } from './store/useStore';
@@ -32,7 +33,7 @@ function App() {
       case 'lists':
         return <MyLists />;
       case 'settings':
-        return <div className="p-8 text-center text-muted italic">Settings content removed as requested.</div>;
+        return <Settings />;
       default:
         return <Home />;
     }

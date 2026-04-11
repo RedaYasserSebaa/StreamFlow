@@ -55,6 +55,12 @@ export const deleteCurrentUser = async (baseUrl: string, token: string) => {
   return response.data;
 };
 
+export const changePassword = async (baseUrl: string, token: string, data: any) => {
+  const api = getBackendApi(baseUrl, token);
+  const response = await api.post('/api/auth/change-password', data);
+  return response.data;
+};
+
 // Helper for image paths
 export const getImagePath = (path: string, size: 'w500' | 'original' = 'w500') => 
   `https://image.tmdb.org/t/p/${size}${path}`;
