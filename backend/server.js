@@ -12,20 +12,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const app = express();
+// Configuration and Data Paths
+const CONFIG_DIR = process.env.STREAMFLOW_CONFIG_DIR || __dirname;
+const USERS_FILE = path.join(CONFIG_DIR, "users.json");
+const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
+
 let USERS = [];
 const JWT_SECRET = process.env.JWT_SECRET || "streamflow-super-secret-key-123";
 
-// In-memory Quick Connect codes (code -> { userId, expiresAt })
-const QUICK_CODES = new Map();
-
-// Helper to cleanup expired codes every minute
-setInterval(() => {
-  const now = Date.now();
-  for (const [code, data] of QUICK_CODES.entries()) {
-    if (data.expiresAt < now) QUICK_CODES.delete(code);
-  }
-}, 60000);
-
+// Load users
 try {
   if (fs.existsSync(USERS_FILE)) {
     USERS = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
@@ -43,9 +38,18 @@ function saveUsers() {
   }
 }
 
+// In-memory Quick Connect codes (code -> { userId, expiresAt })
+const QUICK_CODES = new Map();
+
+// Helper to cleanup expired codes every minute
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, data] of QUICK_CODES.entries()) {
+    if (data.expiresAt < now) QUICK_CODES.delete(code);
+  }
+}, 60000);
+
 // Load or create configuration
-const CONFIG_DIR = process.env.STREAMFLOW_CONFIG_DIR || __dirname;
-const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
 let CONFIG = {
   tmdb_api_key: process.env.TMDB_API_KEY || null,
   jackett_api_key: process.env.JACKETT_API_KEY || null,
