@@ -7,7 +7,7 @@ import type { Movie } from '../types';
 import Section from '../components/common/Section';
 
 const OfflineMode = () => {
-  const { config, user } = useStore();
+  const { config, user, setSelectedMovie } = useStore();
   const [localMedia, setLocalMedia] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -92,7 +92,11 @@ const OfflineMode = () => {
             <Section title="Local Movies">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
                 {movies.map((movie) => (
-                  <MovieCard key={movie.localId || movie.id} movie={movie} onClick={() => { }} />
+                  <MovieCard 
+                    key={movie.localId || movie.id} 
+                    movie={movie} 
+                    onClick={() => setSelectedMovie(movie)} 
+                  />
                 ))}
               </div>
             </Section>
@@ -102,7 +106,11 @@ const OfflineMode = () => {
             <Section title="Local TV Shows">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
                 {tvShows.map((show) => (
-                  <MovieCard key={show.localId || show.id} movie={show} onClick={() => { }} />
+                  <MovieCard 
+                    key={show.localId || show.id} 
+                    movie={show} 
+                    onClick={() => setSelectedMovie(show)} 
+                  />
                 ))}
               </div>
             </Section>
