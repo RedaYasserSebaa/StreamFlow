@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Lock, Key, Search, HardDrive, Save, 
   CheckCircle, Loader2, Network, ShieldCheck,
-  ChevronRight, Laptop, FolderOpen, Database, Zap, Smartphone
+  ChevronRight, Laptop, FolderOpen, Database, Zap, Smartphone,
+  RefreshCw
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { getBackendApi, changePassword, authorizeQuickConnectDevice } from '../api';
@@ -12,6 +14,7 @@ const Settings = () => {
   const { config, setConfig, user, showToast } = useStore();
   const [activeTab, setActiveTab] = useState<'quick' | 'profile' | 'config' | 'local'>('quick');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Quick Connect State
   const [connectCode, setConnectCode] = useState('');
@@ -117,6 +120,22 @@ const Settings = () => {
       }
     } catch (err: any) {
       setTestStatus({ type: 'error', message: 'Error' });
+    }
+  };
+
+  const handleRefreshScan = async () => {
+    if (!config?.backend_url || !user?.token) return;
+    
+    setIsRefreshing(true);
+    try {
+      await axios.get(`${config.backend_url}/api/local?refresh=true`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      showToast('Media library refresh complete!', 'success');
+    } catch (err) {
+      showToast('Failed to refresh local media', 'error');
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -358,14 +377,26 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-premium text-white text-sm font-black hover:shadow-lg hover:shadow-accent-primary/30 transition-all disabled:opacity-50"
-                  >
-                    {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    Save Library Paths
-                  </button>
+                  <div className="flex flex-wrap gap-4">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-premium text-white text-sm font-black hover:shadow-lg hover:shadow-accent-primary/30 transition-all disabled:opacity-50"
+                    >
+                      {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                      Save Library Paths
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleRefreshScan}
+                      disabled={isRefreshing}
+                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-black hover:bg-white/10 transition-all disabled:opacity-50"
+                    >
+                      {isRefreshing ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
+                      Refresh Scan
+                    </button>
+                  </div>
                 </form>
               </motion.div>
             )}
