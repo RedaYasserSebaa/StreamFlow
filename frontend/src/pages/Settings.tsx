@@ -3,15 +3,40 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Lock, Key, Search, HardDrive, Save, 
   CheckCircle, Loader2, Network, ShieldCheck,
-  ChevronRight, Laptop, FolderOpen, Database
+  ChevronRight, Laptop, FolderOpen, Database, Zap, Smartphone
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { getBackendApi, changePassword } from '../api';
+import { getBackendApi, changePassword, authorizeQuickConnectDevice } from '../api';
 
 const Settings = () => {
   const { config, setConfig, user, showToast } = useStore();
-  const [activeTab, setActiveTab] = useState<'profile' | 'config' | 'local'>('profile');
+  const [activeTab, setActiveTab] = useState<'quick' | 'profile' | 'config' | 'local'>('quick');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Quick Connect State
+  const [connectCode, setConnectCode] = useState('');
+
+  const handleAuthorizeDevice = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (connectCode.length !== 6) {
+      showToast('Please enter a 6-character code', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (!user?.token || !config?.backend_url) return;
+      const res = await authorizeQuickConnectDevice(config.backend_url, user.token, connectCode);
+      if (res.success) {
+        showToast('Device authorized successfully!', 'success');
+        setConnectCode('');
+      }
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Failed to authorize device', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Form States
   const [passwordData, setPasswordData] = useState({
@@ -99,6 +124,7 @@ const Settings = () => {
   const labelClasses = "text-[10px] text-muted uppercase tracking-widest font-black mb-1.5 flex items-center gap-2";
 
   const tabs = [
+    { id: 'quick', label: 'Quick Connect', icon: Smartphone },
     { id: 'profile', label: 'User Info & Password', icon: User },
     { id: 'config', label: 'Configurations Settings', icon: Key },
     { id: 'local', label: 'Local Files', icon: HardDrive },
@@ -341,6 +367,71 @@ const Settings = () => {
                     Save Library Paths
                   </button>
                 </form>
+              </motion.div>
+            )}
+            {activeTab === 'quick' && (
+              <motion.div
+                key="quick"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-accent-primary/10 border border-accent-primary/20">
+                    <Smartphone className="text-accent-primary" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-white">Quick Connect</h2>
+                    <p className="text-sm text-muted">Authorize a new device instantly using its connection code</p>
+                  </div>
+                </div>
+
+                <div className="max-w-xl space-y-6">
+                  <div className="glass p-8 rounded-3xl border border-white/10 space-y-8 text-center">
+                    <div className="space-y-6 py-4">
+                      <div className="w-20 h-20 bg-accent-primary/10 rounded-full flex items-center justify-center mx-auto ring-8 ring-accent-primary/5">
+                        <Zap className="text-accent-primary animate-pulse" size={32} />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-bold">Connect a New Device</h3>
+                        <p className="text-sm text-muted px-8">Enter the 6-character code displayed on the device you want to link to your account.</p>
+                      </div>
+
+                      <form onSubmit={handleAuthorizeDevice} className="space-y-6">
+                        <div className="p-2 bg-white/5 rounded-2xl border border-white/10 max-w-[280px] mx-auto">
+                          <input
+                            type="text"
+                            placeholder="E.G. A1B2C3"
+                            required
+                            maxLength={6}
+                            className="w-full bg-transparent border-none py-4 px-4 text-center text-3xl font-black tracking-[0.4em] focus:ring-0 uppercase placeholder:text-white/10"
+                            value={connectCode}
+                            onChange={(e) => setConnectCode(e.target.value.toUpperCase())}
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={isLoading}
+                          className="px-12 py-4 rounded-2xl bg-gradient-premium text-white text-sm font-black hover:shadow-lg hover:shadow-accent-primary/30 transition-all disabled:opacity-50 mx-auto flex items-center gap-2"
+                        >
+                          {isLoading ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
+                          Authorize Device
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
+                      <ShieldCheck size={12} /> Security Notice
+                    </h4>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Only authorize devices that you physically control. Authorizing a device gives it full access to your account, search history, and media library.
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

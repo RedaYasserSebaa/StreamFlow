@@ -61,6 +61,24 @@ export const changePassword = async (baseUrl: string, token: string, data: any) 
   return response.data;
 };
 
+export const generateQuickConnectCode = async (baseUrl: string) => {
+  const api = getBackendApi(baseUrl);
+  const response = await api.post('/api/auth/quick-connect/generate');
+  return response.data;
+};
+
+export const authorizeQuickConnectDevice = async (baseUrl: string, token: string, code: string) => {
+  const api = getBackendApi(baseUrl, token);
+  const response = await api.post('/api/auth/quick-connect/authorize', { code });
+  return response.data;
+};
+
+export const pollQuickConnectStatus = async (baseUrl: string, code: string) => {
+  const api = getBackendApi(baseUrl);
+  const response = await api.get(`/api/auth/quick-connect/poll/${code}`);
+  return response.data;
+};
+
 // Helper for image paths
 export const getImagePath = (path: string, size: 'w500' | 'original' = 'w500') => 
   `https://image.tmdb.org/t/p/${size}${path}`;

@@ -12,11 +12,19 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const app = express();
+let USERS = [];
 const JWT_SECRET = process.env.JWT_SECRET || "streamflow-super-secret-key-123";
 
-// Load or create users database
-const USERS_FILE = path.join(process.env.STREAMFLOW_CONFIG_DIR || __dirname, "users.json");
-let USERS = [];
+// In-memory Quick Connect codes (code -> { userId, expiresAt })
+const QUICK_CODES = new Map();
+
+// Helper to cleanup expired codes every minute
+setInterval(() => {
+  const now = Date.now();
+  for (const [code, data] of QUICK_CODES.entries()) {
+    if (data.expiresAt < now) QUICK_CODES.delete(code);
+  }
+}, 60000);
 
 try {
   if (fs.existsSync(USERS_FILE)) {
@@ -263,6 +271,75 @@ app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+// Quick Connect Endpoints
+app.post("/api/auth/quick-connect/generate", (req, res) => {
+  // Generate a random 6-character alphanumeric code
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const expiresAt = Date.now() + 600000; // 10 minutes from now
+
+  QUICK_CODES.set(code, { 
+    status: 'pending',
+    userId: null,
+    token: null,
+    user: null,
+    expiresAt 
+  });
+  
+  res.json({ success: true, code, expiresAt });
+});
+
+app.post("/api/auth/quick-connect/authorize", authenticateToken, async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: "Code is required" });
+
+  const data = QUICK_CODES.get(code.toUpperCase());
+  if (!data || data.expiresAt < Date.now()) {
+    return res.status(400).json({ error: "Invalid or expired code" });
+  }
+
+  const user = USERS.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  // Authorize the code
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+  QUICK_CODES.set(code.toUpperCase(), {
+    ...data,
+    status: 'authorized',
+    userId: user.id,
+    token,
+    user: {
+      username: user.username,
+      config: user.config,
+      userLists: user.userLists,
+      continueWatching: user.continueWatching
+    }
+  });
+
+  res.json({ success: true, message: "Device authorized successfully" });
+});
+
+app.get("/api/auth/quick-connect/poll/:code", (req, res) => {
+  const code = req.params.code.toUpperCase();
+  const data = QUICK_CODES.get(code);
+
+  if (!data || data.expiresAt < Date.now()) {
+    return res.status(400).json({ error: "Invalid or expired code" });
+  }
+
+  if (data.status === 'authorized') {
+    // Cleanup after successful poll
+    QUICK_CODES.delete(code);
+    return res.json({ 
+      success: true, 
+      status: 'authorized',
+      token: data.token,
+      user: data.user
+    });
+  }
+
+  res.json({ success: true, status: 'pending' });
 });
 
 app.delete("/api/auth/delete-me", authenticateToken, (req, res) => {

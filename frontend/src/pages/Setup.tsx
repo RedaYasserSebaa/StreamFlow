@@ -2,15 +2,22 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Key, Server, CheckCircle, Network, ChevronRight, 
-  AlertCircle, Loader2, User, Lock, UserPlus, LogIn, HardDrive
+  AlertCircle, Loader2, User, Lock, UserPlus, LogIn, HardDrive,
+  Smartphone, Clock
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { getBackendApi, loginUser, registerUser, deleteCurrentUser } from '../api';
+import { 
+  getBackendApi, loginUser, registerUser, 
+  deleteCurrentUser, pollQuickConnectStatus, 
+  generateQuickConnectCode
+} from '../api';
 
 const Setup = () => {
   const { config, setConfig, login, logout, showToast, isAuthenticated, user } = useStore();
   const [step, setStep] = useState(1);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'quick'>('signup');
+  const [quickCode, setQuickCode] = useState<{ code: string, expiresAt: number } | null>(null);
+  const [timeLeft, setTimeLeft] = useState(0);
   
   const [authData, setAuthData] = useState({
     username: '',
@@ -37,6 +44,60 @@ const Setup = () => {
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Poll for Quick Connect status
+  useEffect(() => {
+    let pollInterval: any;
+    let timerInterval: any;
+
+    if (authMode === 'quick' && !quickCode && !isLoading) {
+      const initQuickConnect = async () => {
+        setIsLoading(true);
+        try {
+          const res = await generateQuickConnectCode(formData.backend_url);
+          if (res.success) {
+            setQuickCode({ code: res.code, expiresAt: res.expiresAt });
+          }
+        } catch (err) {
+          showToast('Failed to initialize Quick Connect', 'error');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      initQuickConnect();
+    }
+
+    if (quickCode) {
+      // Countdown timer
+      timerInterval = setInterval(() => {
+        const remaining = Math.max(0, Math.floor((quickCode.expiresAt - Date.now()) / 1000));
+        setTimeLeft(remaining);
+        if (remaining === 0) setQuickCode(null);
+      }, 1000);
+
+      // Status polling
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await pollQuickConnectStatus(formData.backend_url, quickCode.code);
+          if (res.success && res.status === 'authorized') {
+            login({ username: res.user.username, token: res.token }, res.user);
+            showToast('Device linked successfully!', 'success');
+            if (res.user.config) {
+              setFormData(f => ({ ...f, ...res.user.config }));
+            }
+            setStep(2);
+          }
+        } catch (err) {
+          // Silent fail on polling errors
+        }
+      }, 3000);
+    }
+
+    return () => {
+      clearInterval(pollInterval);
+      clearInterval(timerInterval);
+    };
+  }, [authMode, quickCode, formData.backend_url, isLoading]);
 
   useEffect(() => {
     if (isAuthenticated() && step === 1) {
@@ -180,80 +241,154 @@ const Setup = () => {
 
         <AnimatePresence mode="wait">
           {step === 1 ? (
-            <motion.form 
-              key="auth-step"
+            <motion.div 
+              key={authMode === 'quick' ? 'quick-step' : 'auth-step'}
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 20, opacity: 0 }}
-              onSubmit={handleAuth} 
               className="space-y-6"
             >
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-wider px-1 flex items-center gap-2">
-                    <User size={12} /> Username
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter your username"
-                    required
-                    className={inputClasses}
-                    value={authData.username}
-                    onChange={(e) => setAuthData({...authData, username: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-wider px-1 flex items-center gap-2">
-                    <Lock size={12} /> Password
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Enter your password"
-                    required
-                    className={inputClasses}
-                    value={authData.password}
-                    onChange={(e) => setAuthData({...authData, password: e.target.value})}
-                  />
-                </div>
-                {authMode === 'signup' && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-wider px-1 flex items-center gap-2">
-                      <Lock size={12} /> Confirm Password
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Confirm your password"
-                      required
-                      className={inputClasses}
-                      value={authData.confirmPassword}
-                      onChange={(e) => setAuthData({...authData, confirmPassword: e.target.value})}
-                    />
-                  </div>
-                )}
-              </div>
+              {authMode === 'quick' ? (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="w-16 h-16 bg-accent-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-accent-primary/20">
+                      <Smartphone className="text-accent-primary" size={28} />
+                    </div>
+                    <div className="text-center space-y-2 mb-8">
+                      <h3 className="font-bold text-lg">Quick Connect</h3>
+                      <p className="text-xs text-muted">Enter this code on your already logged-in device</p>
+                    </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isLoading ? <Loader2 size={20} className="animate-spin" /> : authMode === 'signup' ? <UserPlus size={20} /> : <LogIn size={20} />}
-                  {authMode === 'signup' ? 'Create Account' : 'Login Now'}
-                </button>
-                
-                <p className="text-center mt-4 text-xs text-muted">
-                  {authMode === 'signup' ? 'Already have an account?' : 'Need a new account?'}
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')}
-                    className="ml-1 text-accent-primary font-bold hover:underline"
-                  >
-                    {authMode === 'signup' ? 'Login' : 'Sign Up'}
-                  </button>
-                </p>
-              </div>
-            </motion.form>
+                    {!quickCode ? (
+                       <div className="py-8 flex justify-center">
+                         <Loader2 className="text-accent-primary animate-spin" size={32} />
+                       </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="p-6 bg-white/5 rounded-3xl border border-white/10 text-center relative overflow-hidden group">
+                          <div className="absolute inset-0 bg-accent-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                          <div className="text-5xl font-black tracking-[0.3em] text-white font-mono relative z-10">
+                            {quickCode.code}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                            <Clock size={12} className={timeLeft < 60 ? 'text-accent-danger animate-pulse' : 'text-accent-primary'} />
+                            <span className={timeLeft < 60 ? 'text-accent-danger' : 'text-muted'}>
+                              Expires in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-accent-primary font-bold animate-pulse">
+                            <div className="w-1.5 h-1.5 rounded-full bg-accent-primary"></div>
+                            Waiting for authorization...
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-4 space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => setQuickCode(null)}
+                      className="w-full text-[10px] text-muted font-black uppercase tracking-widest hover:text-white transition-colors"
+                    >
+                      Generate New Code
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('login')}
+                      className="w-full text-xs text-muted font-bold hover:text-white transition-colors"
+                    >
+                      Back to Login
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleAuth} className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-muted uppercase tracking-wider px-1 flex items-center gap-2">
+                        <User size={12} /> Username
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your username"
+                        required
+                        className={inputClasses}
+                        value={authData.username}
+                        onChange={(e) => setAuthData({...authData, username: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-muted uppercase tracking-wider px-1 flex items-center gap-2">
+                        <Lock size={12} /> Password
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="Enter your password"
+                        required
+                        className={inputClasses}
+                        value={authData.password}
+                        onChange={(e) => setAuthData({...authData, password: e.target.value})}
+                      />
+                    </div>
+                    {authMode === 'signup' && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-muted uppercase tracking-wider px-1 flex items-center gap-2">
+                          <Lock size={12} /> Confirm Password
+                        </label>
+                        <input
+                          type="password"
+                          placeholder="Confirm your password"
+                          required
+                          className={inputClasses}
+                          value={authData.confirmPassword}
+                          onChange={(e) => setAuthData({...authData, confirmPassword: e.target.value})}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isLoading ? <Loader2 size={20} className="animate-spin" /> : authMode === 'signup' ? <UserPlus size={20} /> : <LogIn size={20} />}
+                      {authMode === 'signup' ? 'Create Account' : 'Login Now'}
+                    </button>
+                    
+                    <div className="mt-6 flex flex-col gap-3 items-center">
+                      <p className="text-xs text-muted">
+                        {authMode === 'signup' ? 'Already have an account?' : 'Need a new account?'}
+                        <button
+                          type="button"
+                          onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')}
+                          className="ml-1 text-accent-primary font-bold hover:underline"
+                        >
+                          {authMode === 'signup' ? 'Login' : 'Sign Up'}
+                        </button>
+                      </p>
+                      
+                      <div className="h-px w-20 bg-white/5 my-1"></div>
+
+                      <button
+                        type="button"
+                        onClick={() => setAuthMode('quick')}
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted hover:text-accent-primary transition-all"
+                      >
+                        <Smartphone size={14} />
+                        Login with Quick Connect
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </motion.div>
           ) : step === 2 ? (
             <motion.form 
               key="config-step"
