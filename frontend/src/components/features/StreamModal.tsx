@@ -69,7 +69,14 @@ const StreamModal = () => {
         seasonEpi = `S${selectedSeason.toString().padStart(2, '0')}E${selectedEpisode.toString().padStart(2, '0')}`;
       }
       const title = selectedMovie.title || selectedMovie.name || '';
-      const results = await searchStreams(config.backend_url, title, selectedMovie.media_type, seasonEpi);
+      const year = (selectedMovie.release_date || (selectedMovie as any).first_air_date)?.split('-')[0];
+      const results = await searchStreams(
+        config.backend_url, 
+        title, 
+        selectedMovie.media_type, 
+        seasonEpi,
+        year
+      );
       setTorrents(results);
     } catch (err) {
       console.error(err);

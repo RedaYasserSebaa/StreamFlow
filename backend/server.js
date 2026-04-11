@@ -71,7 +71,12 @@ function saveConfig() {
 
 // Local Media Utilities
 function parseLocalFilename(filename) {
-  const cleanName = filename.replace(/\.(mp4|mkv|avi|mov|webm)$/i, "").replace(/[._]/g, " ");
+  // Remove extension and common separators
+  const cleanName = filename
+    .replace(/\.(mp4|mkv|avi|mov|webm|m4v|ts|flv)$/i, "")
+    .replace(/[._\[\]()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   
   // Try TV show pattern S01E01 or 1x01
   const tvMatch = cleanName.match(/(.+?)\s*S(\d+)\s*E(\d+)/i) || cleanName.match(/(.+?)\s*(\d+)x(\d+)/i);
@@ -94,7 +99,7 @@ function parseLocalFilename(filename) {
     };
   }
 
-  return { type: "unknown", title: cleanName.trim() };
+  return { type: "unknown", title: cleanName };
 }
 
 function findMediaFiles(dir, files = []) {
@@ -116,39 +121,59 @@ function findMediaFiles(dir, files = []) {
   return files;
 }
 
-function findLocalMatch(searchTitle, type, season = null, episode = null) {
+function findLocalMatch(searchTitle, type, season = null, episode = null, year = null) {
   const rootDir = type === "movie" ? CONFIG.movies_path : CONFIG.tv_shows_path;
-  if (!rootDir) return null;
+  if (!rootDir || !fs.existsSync(rootDir)) return null;
 
   const allFiles = findMediaFiles(rootDir);
   const normalizedSearch = searchTitle.toLowerCase().replace(/[^a-z0-9]/g, "");
 
   for (const file of allFiles) {
-    const info = parseLocalFilename(file.name);
-    if (info.type === "unknown") {
-      // Fallback: direct title match in filename
-      const normalizedFile = file.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-      if (normalizedFile.includes(normalizedSearch)) {
-        if (type === "tv" && season !== null && episode !== null) {
-          const epStr = `s${season.toString().padStart(2, "0")}e${episode.toString().padStart(2, "0")}`;
-          if (normalizedFile.includes(epStr)) return file;
-        } else if (type === "movie") {
-          return file;
-        }
-      }
-      continue;
-    }
-
-    if (info.type !== type) continue;
+    const fileName = file.name;
+    const folderName = path.basename(path.dirname(file.path));
     
-    const normalizedInfoTitle = info.title.toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (normalizedSearch.includes(normalizedInfoTitle) || normalizedInfoTitle.includes(normalizedSearch)) {
+    // Parse both filename and folder name
+    const fileInfo = parseLocalFilename(fileName);
+    const folderInfo = parseLocalFilename(folderName);
+
+    // Combine info: prioritize filename info but fallback to folder info
+    const info = fileInfo.type !== "unknown" ? fileInfo : folderInfo;
+    
+    // Check if the type matches
+    if (info.type !== "unknown" && info.type !== type) continue;
+
+    const normalizedFileInfoTitle = info.title.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const normalizedFolderName = folderName.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const normalizedFileName = fileName.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    // Title match logic
+    const isTitleMatch = (
+      normalizedSearch.includes(normalizedFileInfoTitle) || 
+      normalizedFileInfoTitle.includes(normalizedSearch) ||
+      normalizedFolderName.includes(normalizedSearch) ||
+      normalizedFileName.includes(normalizedSearch)
+    );
+
+    if (isTitleMatch) {
       if (type === "tv") {
-        if (info.season === parseInt(season) && info.episode === parseInt(episode)) {
+        // For TV, we MUST match season and episode
+        // Check if SxxExx is in the filename or foldername if info failed
+        const epStr = `s${season?.toString().padStart(2, "0")}e${episode?.toString().padStart(2, "0")}`;
+        const hasEpMatch = (
+          (info.season === parseInt(season) && info.episode === parseInt(episode)) ||
+          normalizedFileName.includes(epStr) ||
+          normalizedFolderName.includes(epStr)
+        );
+        if (hasEpMatch) return file;
+      } else {
+        // For movies, if we have a year, try to confirm it
+        if (year && (info.year || folderInfo.year)) {
+          const matchedYear = info.year || folderInfo.year;
+          if (matchedYear === parseInt(year)) return file;
+        } else {
+          // If no year specified or found, just trust the title match
           return file;
         }
-      } else {
-        return file;
       }
     }
   }
@@ -601,23 +626,34 @@ app.post("/api/config", (req, res) => {
 
 // Search Endpoint - Detailed Torrents list
 app.post("/api/search", async (req, res) => {
-  const { title, type, seasonEpi } = req.body;
+  const { title, type, seasonEpi, year } = req.body;
+  const mediaType = type === 'tv' ? 'tv' : 'movie';
   const searchTitle = title || req.body.movieTitle;
 
   if (!searchTitle) {
-    return res.status(400).json({ error: "title is required" });
+    return res.status(400).json({ error: "Title is required" });
+  }
+
+  // Look for a local match first
+  let localFile = null;
+  try {
+    let season = null;
+    let episode = null;
+    if (mediaType === 'tv' && seasonEpi) {
+      const match = seasonEpi.match(/S(\d+)E(\d+)/i);
+      if (match) {
+        season = parseInt(match[1]);
+        episode = parseInt(match[2]);
+      }
+    }
+    localFile = findLocalMatch(searchTitle, mediaType, season, episode, year);
+  } catch (e) {
+    console.error("Error finding local match:", e);
   }
 
   try {
-    const mediaType = type || 'movie';
     const results = await searchTorrentMagnetLinks(searchTitle, mediaType, seasonEpi || '');
     
-    // Check for local media
-    const localFile = findLocalMatch(searchTitle, mediaType, 
-      seasonEpi ? parseInt(seasonEpi.match(/S(\d+)/i)?.[1] || "1") : null,
-      seasonEpi ? parseInt(seasonEpi.match(/E(\d+)/i)?.[1] || "1") : null
-    );
-
     const mappedResults = results.map((r) => ({
       title: r.title,
       seeders: r.seeders,

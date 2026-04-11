@@ -133,8 +133,14 @@ export const srt2vtt = (srt: string) => {
   return vtt;
 };
 
-export const searchStreams = async (backendUrl: string, title: string, type: 'movie' | 'tv', seasonEpi?: string): Promise<Torrent[]> => {
+export const searchStreams = async (
+  backendUrl: string, 
+  title: string, 
+  type: 'movie' | 'tv', 
+  seasonEpi?: string,
+  year?: string
+): Promise<Torrent[]> => {
   const api = getBackendApi(backendUrl);
-  const response = await api.post('/api/search', { title, type, seasonEpi });
+  const response = await api.post('/api/search', { title, type, seasonEpi, year });
   return response.data.results;
 };
