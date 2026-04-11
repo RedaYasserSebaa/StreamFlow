@@ -187,10 +187,10 @@ const StreamModal = () => {
           <X size={20} />
         </button>
 
-        {/* LEFT PANE: PLAYER (50%) */}
-        <div className="flex-1 min-h-[40vh] md:h-full relative bg-black/20 flex flex-col">
+        {/* LEFT PANE: PLAYER (centered) */}
+        <div className="flex-1 min-h-[40vh] md:h-full relative bg-black/20 flex flex-col justify-center">
           {streamUrl ? (
-            <div className="flex-1 relative">
+            <div className="w-full relative aspect-video">
               <VideoPlayer 
                 src={streamUrl} 
                 subtitles={customSubtitles}
@@ -342,7 +342,7 @@ const StreamModal = () => {
               </div>
             </div>
           ) : (
-            <div className="flex-1 relative group cursor-pointer" onClick={handleSearch}>
+            <div className="flex-1 relative group cursor-pointer overflow-hidden" onClick={handleSearch}>
               <img 
                 src={getImagePath(selectedMovie.backdrop_path || selectedMovie.poster_path, 'original')} 
                 className="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000"
@@ -356,153 +356,168 @@ const StreamModal = () => {
           )}
         </div>
 
-        {/* MIDDLE PANE: STREAMS (20%) */}
-        <div className="w-full md:w-[35%] lg:w-[20%] h-full border-x border-white/5 bg-white/[0.02] p-6 overflow-y-auto flex flex-col gap-6 custom-scrollbar">
-          <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 relative">
-            <button 
-              onClick={() => setActiveTab('streams')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg z-10 ${activeTab === 'streams' ? 'text-white' : 'text-muted hover:text-white'}`}
-            >
-              <PlayCircle size={14} />
-              Streams
-            </button>
-            <button 
-              onClick={() => setActiveTab('local')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg z-10 ${activeTab === 'local' ? 'text-white' : 'text-muted hover:text-white'}`}
-            >
-              <HardDrive size={14} />
-              Local
-            </button>
-            <motion.div 
-              className="absolute inset-y-1 bg-gradient-premium rounded-lg shadow-lg"
-              initial={false}
-              animate={{ 
-                left: activeTab === 'streams' ? '4px' : '50%',
-                right: activeTab === 'streams' ? '50%' : '4px'
-              }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            />
-          </div>
-
-          {/* TV Selectors */}
-          {selectedMovie.media_type === 'tv' && (
-            <div className="space-y-4 animate-in slide-in-from-top-4 duration-500">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] text-muted uppercase tracking-wider font-semibold px-1">Season</label>
-                  <select 
-                    value={selectedSeason}
-                    onChange={(e) => handleSeasonChange(parseInt(e.target.value))}
-                    className={selectClasses}
-                  >
-                    {Array.from({ length: details?.number_of_seasons || 1 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>Season {i + 1}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] text-muted uppercase tracking-wider font-semibold px-1">Episode</label>
-                  <select 
-                    value={selectedEpisode}
-                    onChange={(e) => setSelectedEpisode(parseInt(e.target.value))}
-                    className={selectClasses}
-                  >
-                    {episodes.map(ep => (
-                      <option key={ep.episode_number} value={ep.episode_number}>
-                        Ep {ep.episode_number}: {ep.name.slice(0, 15)}...
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={handleSearch}
-            disabled={loadingTorrents}
-            className="w-full py-3.5 bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
-          >
-            {loadingTorrents ? <Loader2 size={16} className="animate-spin" /> : <PlayCircle size={16} className="group-hover:scale-110 transition-transform" />}
-            FIND STREAMS
-          </button>
-
-          {/* Filters UI */}
-          {torrents.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 animate-in fade-in duration-500">
-              <div className="space-y-1">
-                <label className="text-[9px] text-muted uppercase tracking-widest font-bold px-1">Quality</label>
-                <select 
-                  value={qualityFilter}
-                  onChange={(e) => setQualityFilter(e.target.value)}
-                  className={selectClasses}
-                >
-                  <option value="all">All</option>
-                  {availableQualities.map(q => <option key={q} value={q}>{q}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[9px] text-muted uppercase tracking-widest font-bold px-1">Indexer</label>
-                <select 
-                  value={indexerFilter}
-                  onChange={(e) => setIndexerFilter(e.target.value)}
-                  className={selectClasses}
-                >
-                  <option value="all">All</option>
-                  {availableIndexers.map(i => <option key={i} value={i}>{i}</option>)}
-                </select>
-              </div>
-            </div>
-          )}
-
-          <TorrentList torrents={filteredTorrents} onSelect={handlePlay} loading={loadingTorrents} />
-        </div>
-
-        {/* RIGHT PANE: INFO (20%) */}
-        <div className="hidden lg:flex lg:w-[20%] h-full p-8 flex-col gap-8 bg-white/[0.04]">
-          <div className="space-y-4">
-            <h2 className="text-2xl font-black leading-tight text-white">{selectedMovie.title || selectedMovie.name}</h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="px-3 py-1 rounded-lg bg-accent-primary/10 text-accent-primary text-xs font-bold border border-accent-primary/20">
-                {selectedMovie.release_date || selectedMovie.first_air_date ? new Date(selectedMovie.release_date || selectedMovie.first_air_date!).getFullYear() : 'N/A'}
-              </span>
-              <span className="flex items-center gap-1.5 text-xs font-bold text-accent-secondary bg-accent-secondary/10 px-3 py-1 rounded-lg border border-accent-secondary/20">
-                ⭐ {selectedMovie.vote_average.toFixed(1)}
-              </span>
-              {selectedMovie.media_type === 'tv' && (
-                <span className="px-3 py-1 rounded-lg bg-green-500/10 text-green-400 text-xs font-bold border border-green-500/20 uppercase tracking-tighter">
-                  {details?.number_of_seasons} Seasons
+        {/* SIDE PANE: INFO & STREAMS (increased width) */}
+        <div className="w-full lg:w-[480px] xl:w-[580px] h-full border-l border-white/5 bg-white/[0.02] flex flex-col overflow-hidden">
+          {/* Scrollable Content Container */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+            
+            {/* 1. MOVIE INFO SECTION (TOP) */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-black leading-tight text-white">{selectedMovie.title || selectedMovie.name}</h2>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="px-3 py-1 rounded-lg bg-accent-primary/10 text-accent-primary text-[10px] font-black border border-accent-primary/20 uppercase tracking-widest">
+                  {selectedMovie.release_date || (selectedMovie as any).first_air_date ? new Date(selectedMovie.release_date || (selectedMovie as any).first_air_date!).getFullYear() : 'N/A'}
                 </span>
+                <span className="flex items-center gap-1.5 text-[10px] font-black text-accent-secondary bg-accent-secondary/10 px-3 py-1 rounded-lg border border-accent-secondary/20 uppercase tracking-widest">
+                  ⭐ {selectedMovie.vote_average.toFixed(1)}
+                </span>
+                {selectedMovie.media_type === 'tv' && (
+                  <span className="px-3 py-1 rounded-lg bg-green-500/10 text-green-400 text-[10px] font-black border border-green-500/20 uppercase tracking-widest">
+                    {details?.number_of_seasons} Seasons
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted leading-relaxed">
+                {selectedMovie.overview}
+              </p>
+            </div>
+
+            {/* 2. ADD TO COLLECTION */}
+            <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+              <div className="flex items-center gap-2 text-[10px] text-muted uppercase tracking-widest font-black">
+                <Plus size={14} className="text-accent-primary" />
+                ADD TO COLLECTION
+              </div>
+              <div className="space-y-3">
+                <select 
+                  className={selectClasses}
+                  value={selectedList}
+                  onChange={(e) => setSelectedList(e.target.value)}
+                >
+                  <option value="">Choose a list...</option>
+                  {Object.keys(userLists).map(list => (
+                    <option key={list} value={list}>{list}</option>
+                  ))}
+                </select>
+                <button 
+                  onClick={() => selectedList && addToList(selectedList, selectedMovie)}
+                  disabled={!selectedList}
+                  className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all border border-white/5 disabled:opacity-30 flex items-center justify-center gap-2"
+                >
+                  Save to List
+                </button>
+              </div>
+            </div>
+
+            <div className="h-px bg-white/5 w-full" />
+
+            {/* 3. TABS & SEARCH CONTROLS */}
+            <div className="space-y-6">
+              <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 relative">
+                <button 
+                  onClick={() => setActiveTab('streams')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg z-10 ${activeTab === 'streams' ? 'text-white' : 'text-muted hover:text-white'}`}
+                >
+                  <PlayCircle size={14} />
+                  Streams
+                </button>
+                <button 
+                  onClick={() => setActiveTab('local')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg z-10 ${activeTab === 'local' ? 'text-white' : 'text-muted hover:text-white'}`}
+                >
+                  <HardDrive size={14} />
+                  Local
+                </button>
+                <motion.div 
+                  className="absolute inset-y-1 bg-gradient-premium rounded-lg shadow-lg"
+                  initial={false}
+                  animate={{ 
+                    left: activeTab === 'streams' ? '4px' : '50%',
+                    right: activeTab === 'streams' ? '50%' : '4px'
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              </div>
+
+              {/* TV Selectors */}
+              {selectedMovie.media_type === 'tv' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-muted uppercase tracking-wider font-semibold px-1">Season</label>
+                      <select 
+                        value={selectedSeason}
+                        onChange={(e) => handleSeasonChange(parseInt(e.target.value))}
+                        className={selectClasses}
+                      >
+                        {Array.from({ length: details?.number_of_seasons || 1 }, (_, i) => (
+                          <option key={i + 1} value={i + 1}>Season {i + 1}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-muted uppercase tracking-wider font-semibold px-1">Episode</label>
+                      <select 
+                        value={selectedEpisode}
+                        onChange={(e) => setSelectedEpisode(parseInt(e.target.value))}
+                        className={selectClasses}
+                      >
+                        {episodes.map(ep => (
+                          <option key={ep.episode_number} value={ep.episode_number}>
+                            Ep {ep.episode_number}: {ep.name.slice(0, 15)}...
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleSearch}
+                disabled={loadingTorrents}
+                className="w-full py-3.5 bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+              >
+                {loadingTorrents ? <Loader2 size={16} className="animate-spin" /> : <PlayCircle size={16} className="group-hover:scale-110 transition-transform" />}
+                FIND STREAMS
+              </button>
+
+              {/* Filters UI */}
+              {torrents.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[9px] text-muted uppercase tracking-widest font-bold px-1">Quality</label>
+                    <select 
+                      value={qualityFilter}
+                      onChange={(e) => setQualityFilter(e.target.value)}
+                      className={selectClasses}
+                    >
+                      <option value="all">All</option>
+                      {availableQualities.map(q => <option key={q} value={q}>{q}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] text-muted uppercase tracking-widest font-bold px-1">Indexer</label>
+                    <select 
+                      value={indexerFilter}
+                      onChange={(e) => setIndexerFilter(e.target.value)}
+                      className={selectClasses}
+                    >
+                      <option value="all">All</option>
+                      {availableIndexers.map(i => <option key={i} value={i}>{i}</option>)}
+                    </select>
+                  </div>
+                </div>
               )}
             </div>
-            <p className="text-sm text-muted leading-relaxed max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
-              {selectedMovie.overview}
-            </p>
-          </div>
 
-          <div className="mt-auto space-y-4 pt-8 border-t border-white/5">
-            <div className="flex items-center gap-2 text-[10px] text-muted uppercase tracking-widest font-black">
-              <Plus size={14} className="text-accent-primary" />
-              ADD TO COLLECTION
-            </div>
-            <div className="space-y-3">
-              <select 
-                className={selectClasses}
-                value={selectedList}
-                onChange={(e) => setSelectedList(e.target.value)}
-              >
-                <option value="">Choose a list...</option>
-                {Object.keys(userLists).map(list => (
-                  <option key={list} value={list}>{list}</option>
-                ))}
-              </select>
-              <button 
-                onClick={() => selectedList && addToList(selectedList, selectedMovie)}
-                disabled={!selectedList}
-                className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all border border-white/5 disabled:opacity-30"
-              >
-                Add Movie to List
-              </button>
+            {/* 4. TORRENT LIST (BOTTOM) */}
+            <div className="space-y-4 h-full">
+               <div className="flex items-center justify-between">
+                 <div className="text-[10px] text-muted uppercase tracking-widest font-black">AVAILABLE STREAMS</div>
+                 {filteredTorrents.length > 0 && <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-muted">{filteredTorrents.length} Results</span>}
+               </div>
+               <TorrentList torrents={filteredTorrents} onSelect={handlePlay} loading={loadingTorrents} />
             </div>
           </div>
         </div>
