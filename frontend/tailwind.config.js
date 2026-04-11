@@ -10,7 +10,7 @@ export default {
         background: "#05070a",
         surface: "#0f1117",
         accent: {
-          primary: "#3b82f6",
+          primary: "var(--accent-primary, #3b82f6)",
           secondary: "#10b981",
           danger: "#ef4444",
         },
@@ -20,7 +20,7 @@ export default {
         sans: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
-        'gradient-premium': 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+        'gradient-premium': 'linear-gradient(135deg, var(--accent-primary, #3b82f6) 0%, #1d4ed8 100%)',
         'gradient-glass': 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
       },
       boxShadow: {

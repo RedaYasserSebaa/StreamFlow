@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Home from './pages/Home';
 import Setup from './pages/Setup';
 import Discover from './pages/Discover';
@@ -10,7 +11,16 @@ import { useStore } from './store/useStore';
 import Toast from './components/common/Toast';
 
 function App() {
-  const { currentView, isConfigured, searchQuery, isAuthenticated } = useStore();
+  const { currentView, isConfigured, searchQuery, isAuthenticated, config } = useStore();
+
+  useEffect(() => {
+    if (config?.accent_color) {
+      document.documentElement.style.setProperty('--accent-primary', config.accent_color);
+    }
+    if (config?.glass_intensity !== undefined) {
+      document.documentElement.style.setProperty('--glass-blur', `${config.glass_intensity}px`);
+    }
+  }, [config?.accent_color, config?.glass_intensity]);
 
   if (!isAuthenticated() || !isConfigured()) {
     return (

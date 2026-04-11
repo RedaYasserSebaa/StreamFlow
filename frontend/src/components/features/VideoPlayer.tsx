@@ -7,6 +7,8 @@ interface VideoPlayerProps {
   poster?: string;
   onPlaying?: () => void;
   onWaiting?: () => void;
+  onEnded?: () => void;
+  seekInterval?: number;
   subtitles?: { src: string; label: string }[];
   subtitleStyle?: {
     fontSize: number;
@@ -16,7 +18,7 @@ interface VideoPlayerProps {
   };
 }
 
-const VideoPlayer = ({ src, poster, onPlaying, onWaiting, subtitles, subtitleStyle }: VideoPlayerProps) => {
+const VideoPlayer = ({ src, poster, onPlaying, onWaiting, onEnded, seekInterval, subtitles, subtitleStyle }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Plyr | null>(null);
 
@@ -24,6 +26,7 @@ const VideoPlayer = ({ src, poster, onPlaying, onWaiting, subtitles, subtitleSty
     if (videoRef.current) {
       playerRef.current = new Plyr(videoRef.current, {
         captions: { active: true, update: true, language: 'auto' },
+        seekTime: seekInterval || 10,
         controls: [
           'play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 
           'captions', 'settings', 'pip', 'airplay', 'fullscreen'
@@ -33,6 +36,7 @@ const VideoPlayer = ({ src, poster, onPlaying, onWaiting, subtitles, subtitleSty
       const video = videoRef.current;
       video.addEventListener('playing', () => onPlaying?.());
       video.addEventListener('waiting', () => onWaiting?.());
+      video.addEventListener('ended', () => onEnded?.());
 
       return () => {
         playerRef.current?.destroy();

@@ -54,10 +54,21 @@ let CONFIG = {
   tmdb_api_key: process.env.TMDB_API_KEY || null,
   jackett_api_key: process.env.JACKETT_API_KEY || null,
   jackett_ip: process.env.JACKETT_IP || "localhost",
-  jackett_port: process.env.JACKETT_PORT || 9117,
+  jackett_port: parseInt(process.env.JACKETT_PORT) || 9117,
   backend_url: process.env.BACKEND_URL || "http://localhost:7676",
   movies_path: process.env.MOVIES_PATH || null,
   tv_shows_path: process.env.TV_SHOWS_PATH || null,
+  
+  // expansion fields
+  auto_scan_interval: 24,
+  metadata_language: 'en-US',
+  accent_color: '#3b82f6',
+  glass_intensity: 12,
+  autoplay: true,
+  seek_interval: 10,
+  default_language: 'en',
+  min_seeders: 1,
+  exclude_keywords: ''
 };
 
 // Load saved configuration
@@ -524,14 +535,23 @@ if (fs.existsSync(distPath)) {
 }
 
 // Function to search real torrents using Jackett
-async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = '') {
+async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = '', userConfig = CONFIG) {
   // Validate required config
-  if (!CONFIG.jackett_api_key || !CONFIG.jackett_ip || !CONFIG.jackett_port) {
+  const jackett_api_key = userConfig.jackett_api_key || CONFIG.jackett_api_key;
+  const jackett_ip = userConfig.jackett_ip || CONFIG.jackett_ip;
+  const jackett_port = userConfig.jackett_port || CONFIG.jackett_port;
+
+  if (!jackett_api_key || !jackett_ip || !jackett_port) {
     throw new Error("Jackett configuration not set. Please complete the setup.");
   }
 
-  const JACKETT_URL = `http://${CONFIG.jackett_ip}:${CONFIG.jackett_port}`;
-  const JACKETT_API_KEY = CONFIG.jackett_api_key;
+  const JACKETT_URL = `http://${jackett_ip}:${jackett_port}`;
+  const JACKETT_API_KEY = jackett_api_key;
+
+  const minSeeders = userConfig.min_seeders || 0;
+  const excludeKeywords = userConfig.exclude_keywords 
+    ? userConfig.exclude_keywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k.length > 0)
+    : [];
 
   try {
     let categories;
@@ -604,7 +624,17 @@ async function searchTorrentMagnetLinks(title, mediaType = 'movie', seasonEpi = 
         date: item.PublishDate,
         indexer: item.Tracker || "Unknown",
       };
-    }).filter((item) => item.magnet);
+    }).filter((item) => {
+      if (!item.magnet) return false;
+      
+      // Apply filters
+      if (item.seeders < minSeeders) return false;
+      
+      const titleLower = item.title.toLowerCase();
+      if (excludeKeywords.some(word => titleLower.includes(word))) return false;
+      
+      return true;
+    });
 
     // First, try to find results that match the title
     // Split title into words and require at least 2 words to match
@@ -835,6 +865,18 @@ app.post("/api/config", (req, res) => {
   if (backend_url) CONFIG.backend_url = backend_url;
   if (movies_path !== undefined) CONFIG.movies_path = movies_path;
   if (tv_shows_path !== undefined) CONFIG.tv_shows_path = tv_shows_path;
+  
+  // expansion fields
+  if (req.body.auto_scan_interval !== undefined) CONFIG.auto_scan_interval = req.body.auto_scan_interval;
+  if (req.body.metadata_language) CONFIG.metadata_language = req.body.metadata_language;
+  if (req.body.accent_color) CONFIG.accent_color = req.body.accent_color;
+  if (req.body.glass_intensity !== undefined) CONFIG.glass_intensity = req.body.glass_intensity;
+  if (req.body.autoplay !== undefined) CONFIG.autoplay = req.body.autoplay;
+  if (req.body.seek_interval !== undefined) CONFIG.seek_interval = req.body.seek_interval;
+  if (req.body.default_language) CONFIG.default_language = req.body.default_language;
+  if (req.body.min_seeders !== undefined) CONFIG.min_seeders = req.body.min_seeders;
+  if (req.body.exclude_keywords !== undefined) CONFIG.exclude_keywords = req.body.exclude_keywords;
+
   if (req.body.hasOwnProperty('setup_complete')) CONFIG.setup_complete = req.body.setup_complete;
 
   // Save configuration to file
@@ -855,8 +897,11 @@ app.post("/api/config", (req, res) => {
   });
 });
 
-// Search Endpoint - Detailed Torrents list
-app.post("/api/search", async (req, res) => {
+// Search Endpoint - Detailed Torrents list (Secured)
+app.post("/api/search", authenticateToken, async (req, res) => {
+  const user = USERS.find(u => u.id === req.user.id);
+  const userConfig = user?.config || CONFIG;
+  
   const { title, type, seasonEpi, year } = req.body;
   const mediaType = type === 'tv' ? 'tv' : 'movie';
   const searchTitle = title || req.body.movieTitle;
@@ -883,7 +928,7 @@ app.post("/api/search", async (req, res) => {
   }
 
   try {
-    const results = await searchTorrentMagnetLinks(searchTitle, mediaType, seasonEpi || '');
+    const results = await searchTorrentMagnetLinks(searchTitle, mediaType, seasonEpi || '', userConfig);
     
     const mappedResults = results.map((r) => ({
       title: r.title,

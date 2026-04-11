@@ -27,14 +27,33 @@ export interface Torrent {
 }
 
 export interface UserConfig {
+  // Core Services
   tmdb_api_key: string | null;
   jackett_api_key: string | null;
   jackett_ip: string;
   jackett_port: number;
   backend_url: string;
   subtitle_api_key?: string;
+  
+  // Library
   movies_path?: string;
   tv_shows_path?: string;
+  auto_scan_interval?: number;
+  metadata_language?: string;
+  
+  // Appearance
+  accent_color?: string;
+  glass_intensity?: number;
+  
+  // Player
+  autoplay?: boolean;
+  seek_interval?: number;
+  default_language?: string;
+  
+  // Search
+  min_seeders?: number;
+  exclude_keywords?: string;
+  
   setup_complete?: boolean;
 }
 

@@ -8,7 +8,7 @@ import TorrentList from './TorrentList';
 import type { Torrent } from '../../types';
 
 const StreamModal = () => {
-  const { selectedMovie, setSelectedMovie, config, userLists, addToList, addToContinueWatching, subtitleStyle, updateSubtitleStyle } = useStore();
+  const { selectedMovie, setSelectedMovie, config, user, userLists, addToList, addToContinueWatching, subtitleStyle, updateSubtitleStyle, showToast } = useStore();
   const [details, setDetails] = useState<any>(null);
   const [torrents, setTorrents] = useState<Torrent[]>([]);
   const [loadingTorrents, setLoadingTorrents] = useState(false);
@@ -72,6 +72,7 @@ const StreamModal = () => {
       const year = (selectedMovie.release_date || (selectedMovie as any).first_air_date)?.split('-')[0];
       const results = await searchStreams(
         config.backend_url, 
+        user?.token || '',
         title, 
         selectedMovie.media_type, 
         seasonEpi,
@@ -141,6 +142,36 @@ const StreamModal = () => {
     reader.readAsText(file);
   };
 
+  const handleNextEpisode = () => {
+    if (selectedMovie?.media_type !== 'tv' || !config?.autoplay) return;
+    
+    const nextEp = selectedEpisode + 1;
+    // Check if next episode exists in current season
+    if (episodes.some(ep => ep.episode_number === nextEp)) {
+      setSelectedEpisode(nextEp);
+      setStreamUrl(null);
+      setTorrents([]);
+      // Give state a moment to update
+      setTimeout(() => {
+        handleSearch();
+      }, 100);
+    } else {
+      // Try next season
+      const nextSeason = selectedSeason + 1;
+      if (details?.number_of_seasons && nextSeason <= details.number_of_seasons) {
+        handleSeasonChange(nextSeason);
+        setStreamUrl(null);
+        setTorrents([]);
+        // Wait longer as handleSeasonChange fetches new episodes
+        setTimeout(() => {
+          handleSearch();
+        }, 1000);
+      } else {
+        showToast('End of series reached!', 'success');
+      }
+    }
+  };
+
   const formatSpeed = (speed: number) => {
     if (speed > 1024 * 1024) return `${(speed / (1024 * 1024)).toFixed(2)} MB/s`;
     if (speed > 1024) return `${(speed / 1024).toFixed(0)} KB/s`;
@@ -197,6 +228,8 @@ const StreamModal = () => {
                 subtitleStyle={subtitleStyle}
                 onPlaying={() => setIsBuffering(false)}
                 onWaiting={() => setIsBuffering(true)}
+                onEnded={handleNextEpisode}
+                seekInterval={config?.seek_interval}
               />
               <AnimatePresence>
                 {isBuffering && (
@@ -296,7 +329,7 @@ const StreamModal = () => {
                         <select
                           value={subtitleStyle.fontFamily}
                           onChange={(e) => updateSubtitleStyle({ fontFamily: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-[11px] focus:outline-none focus:border-accent-primary transition-all appearance-none cursor-pointer"
+                          className="premium-select text-[11px] py-2"
                         >
                           <option value="Inter, sans-serif">Inter (Default)</option>
                           <option value="Arial, sans-serif">Arial</option>

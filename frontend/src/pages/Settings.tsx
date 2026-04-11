@@ -2,17 +2,18 @@ import { useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  User, Lock, Key, Search, HardDrive, Save, 
+  Lock, Key, Search, HardDrive, Save, 
   CheckCircle, Loader2, Network, ShieldCheck,
   ChevronRight, Laptop, FolderOpen, Database, Zap, Smartphone,
   RefreshCw
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { getBackendApi, changePassword, authorizeQuickConnectDevice } from '../api';
+import type { UserConfig } from '../types';
 
 const Settings = () => {
   const { config, setConfig, user, showToast } = useStore();
-  const [activeTab, setActiveTab] = useState<'quick' | 'profile' | 'config' | 'local'>('quick');
+  const [activeTab, setActiveTab] = useState<'quick' | 'security' | 'services' | 'library' | 'player' | 'tuning'>('quick');
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -48,7 +49,7 @@ const Settings = () => {
     confirmPassword: ''
   });
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<UserConfig>({
     tmdb_api_key: config?.tmdb_api_key || '',
     jackett_api_key: config?.jackett_api_key || '',
     jackett_ip: config?.jackett_ip || 'localhost',
@@ -57,7 +58,17 @@ const Settings = () => {
     subtitle_api_key: config?.subtitle_api_key || '',
     movies_path: config?.movies_path || '',
     tv_shows_path: config?.tv_shows_path || '',
-    setup_complete: config?.setup_complete || true
+    setup_complete: config?.setup_complete || true,
+    
+    auto_scan_interval: config?.auto_scan_interval || 24,
+    metadata_language: config?.metadata_language || 'en-US',
+    accent_color: config?.accent_color || '#3b82f6',
+    glass_intensity: config?.glass_intensity || 12,
+    autoplay: config?.autoplay ?? true,
+    seek_interval: config?.seek_interval || 10,
+    default_language: config?.default_language || 'en',
+    min_seeders: config?.min_seeders || 1,
+    exclude_keywords: config?.exclude_keywords ?? ''
   });
 
   const [testStatus, setTestStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error', message: string }>({
@@ -92,8 +103,19 @@ const Settings = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const api = getBackendApi(formData.backend_url);
+      if (!user?.token) throw new Error('Not authenticated');
+      
+      const api = getBackendApi(formData.backend_url, user.token);
+      
+      // Update user-specific data
+      await api.post('/api/user/data', {
+        config: formData
+      });
+      
+      // Also update global config if this is the first setup or for backward compatibility
+      // But primarily we care about the user matching what they see
       await api.post('/api/config', formData);
+      
       setConfig(formData);
       showToast('Settings saved successfully', 'success');
     } catch (err) {
@@ -144,9 +166,11 @@ const Settings = () => {
 
   const tabs = [
     { id: 'quick', label: 'Quick Connect', icon: Smartphone },
-    { id: 'profile', label: 'User Info & Password', icon: User },
-    { id: 'config', label: 'Configurations Settings', icon: Key },
-    { id: 'local', label: 'Local Files', icon: HardDrive },
+    { id: 'security', label: 'User Security', icon: ShieldCheck },
+    { id: 'services', label: 'Media Services', icon: Laptop },
+    { id: 'library', label: 'Local Library', icon: FolderOpen },
+    { id: 'player', label: 'Interface & Player', icon: Zap },
+    { id: 'tuning', label: 'Search Tuning', icon: Search },
   ] as const;
 
   return (
@@ -187,9 +211,9 @@ const Settings = () => {
       <main className="flex-1 h-full overflow-y-auto custom-scrollbar bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-accent-primary/5 via-transparent to-transparent">
         <div className="max-w-4xl mx-auto p-12">
           <AnimatePresence mode="wait">
-            {activeTab === 'profile' && (
+            {activeTab === 'security' && (
               <motion.div
-                key="profile"
+                key="security"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -201,7 +225,7 @@ const Settings = () => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-black text-white">Security Settings</h2>
-                    <p className="text-sm text-muted">Update your account password</p>
+                    <p className="text-sm text-muted">Update your account password and security preferences</p>
                   </div>
                 </div>
 
@@ -253,9 +277,9 @@ const Settings = () => {
               </motion.div>
             )}
 
-            {activeTab === 'config' && (
+            {activeTab === 'services' && (
               <motion.div
-                key="config"
+                key="services"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -279,7 +303,7 @@ const Settings = () => {
                       <input 
                         type="password" 
                         className={inputClasses}
-                        value={formData.tmdb_api_key}
+                        value={formData.tmdb_api_key || ''}
                         onChange={(e) => setFormData({...formData, tmdb_api_key: e.target.value})}
                       />
                     </div>
@@ -301,7 +325,7 @@ const Settings = () => {
                         type="password" 
                         placeholder="Jackett API Key"
                         className={inputClasses}
-                        value={formData.jackett_api_key}
+                        value={formData.jackett_api_key || ''}
                         onChange={(e) => setFormData({...formData, jackett_api_key: e.target.value})}
                       />
                       <div className="grid grid-cols-2 gap-4">
@@ -335,9 +359,9 @@ const Settings = () => {
               </motion.div>
             )}
 
-            {activeTab === 'local' && (
+            {activeTab === 'library' && (
               <motion.div
-                key="local"
+                key="library"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -375,6 +399,21 @@ const Settings = () => {
                         onChange={(e) => setFormData({...formData, tv_shows_path: e.target.value})}
                       />
                     </div>
+                    
+                    <div className="space-y-2 pt-4 border-t border-white/5">
+                      <label className={labelClasses}>Auto-Scan Interval</label>
+                      <select 
+                        className="premium-select"
+                        value={formData.auto_scan_interval}
+                        onChange={(e) => setFormData({...formData, auto_scan_interval: parseInt(e.target.value)})}
+                      >
+                        <option value={1}>Every 1 Hour</option>
+                        <option value={6}>Every 6 Hours</option>
+                        <option value={12}>Every 12 Hours</option>
+                        <option value={24}>Every 24 Hours</option>
+                        <option value={0}>Disabled (Manual Only)</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-4">
@@ -400,6 +439,194 @@ const Settings = () => {
                 </form>
               </motion.div>
             )}
+
+            {activeTab === 'player' && (
+              <motion.div
+                key="player"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-accent-primary/10 border border-accent-primary/20">
+                    <Zap className="text-accent-primary" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-white">Interface & Player</h2>
+                    <p className="text-sm text-muted">Customize how the application looks and behaves</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleConfigSave} className="space-y-6 max-w-2xl">
+                  {/* Appearance */}
+                  <div className="glass p-8 rounded-3xl border border-white/10 space-y-8">
+                    <div className="space-y-4">
+                      <label className={labelClasses}>Accent Color Theme</label>
+                      <div className="flex flex-wrap gap-3">
+                        {['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444'].map(color => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => setFormData({...formData, accent_color: color})}
+                            className={`w-10 h-10 rounded-full border-4 transition-all ${formData.accent_color === color ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-4 border-t border-white/5">
+                      <div className="flex justify-between items-center text-[10px] text-muted font-bold uppercase mb-1">
+                        <span>Glassmorphism Blur</span>
+                        <span className="text-accent-primary">{formData.glass_intensity}px</span>
+                      </div>
+                      <input 
+                        type="range"
+                        min="0"
+                        max="24"
+                        value={formData.glass_intensity}
+                        onChange={(e) => setFormData({...formData, glass_intensity: parseInt(e.target.value)})}
+                        className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-accent-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Player Preferences */}
+                  <div className="glass p-8 rounded-3xl border border-white/10 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <label className="text-xs font-bold text-white">Autoplay Next Episode</label>
+                        <p className="text-[10px] text-muted">Automatically play the next episode when current ends</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({...formData, autoplay: !formData.autoplay})}
+                        className={`w-12 h-6 rounded-full transition-all relative ${formData.autoplay ? 'bg-accent-primary' : 'bg-white/10'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.autoplay ? 'right-1' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                      <div className="space-y-2">
+                        <label className={labelClasses}>Seek Interval</label>
+                        <select 
+                          className="premium-select"
+                          value={formData.seek_interval}
+                          onChange={(e) => setFormData({...formData, seek_interval: parseInt(e.target.value)})}
+                        >
+                          <option value={5}>5 Seconds</option>
+                          <option value={10}>10 Seconds (Default)</option>
+                          <option value={15}>15 Seconds</option>
+                          <option value={30}>30 Seconds</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className={labelClasses}>Default Language</label>
+                        <select 
+                          className="premium-select"
+                          value={formData.default_language}
+                          onChange={(e) => setFormData({...formData, default_language: e.target.value})}
+                        >
+                          <option value="en">English</option>
+                          <option value="es">Spanish</option>
+                          <option value="fr">French</option>
+                          <option value="de">German</option>
+                          <option value="ar">Arabic</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-premium text-white text-sm font-black hover:shadow-lg hover:shadow-accent-primary/30 transition-all"
+                  >
+                    <Save size={18} />
+                    Save Preferences
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
+            {activeTab === 'tuning' && (
+              <motion.div
+                key="tuning"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-4 rounded-2xl bg-accent-primary/10 border border-accent-primary/20">
+                    <Search className="text-accent-primary" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-white">Search Tuning</h2>
+                    <p className="text-sm text-muted">Optimize stream discovery and metadata quality</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleConfigSave} className="space-y-6 max-w-2xl">
+                  <div className="glass p-8 rounded-3xl border border-white/10 space-y-8">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-[10px] text-muted font-bold uppercase mb-1">
+                        <span>Minimum Seeders</span>
+                        <span className="text-accent-primary">{formData.min_seeders}</span>
+                      </div>
+                      <input 
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={formData.min_seeders}
+                        onChange={(e) => setFormData({...formData, min_seeders: parseInt(e.target.value)})}
+                        className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-accent-primary"
+                      />
+                      <p className="text-[10px] text-muted italic mt-1">Streams with fewer seeders will be hidden from results.</p>
+                    </div>
+
+                    <div className="space-y-2 pt-6 border-t border-white/5">
+                      <label className={labelClasses}>Exclude Keywords</label>
+                      <textarea 
+                        className={`${inputClasses} h-24 resize-none`}
+                        placeholder="e.g. CAM, TS, HDCAM, TeleSync"
+                        value={formData.exclude_keywords}
+                        onChange={(e) => setFormData({...formData, exclude_keywords: e.target.value})}
+                      />
+                      <p className="text-[10px] text-muted">Separate keywords with commas. Results containing these words will be filtered out.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 pt-6 border-t border-white/5">
+                      <div className="space-y-2">
+                        <label className={labelClasses}>Metadata Language (TMDB)</label>
+                        <select 
+                          className="premium-select"
+                          value={formData.metadata_language}
+                          onChange={(e) => setFormData({...formData, metadata_language: e.target.value})}
+                        >
+                          <option value="en-US">English (US)</option>
+                          <option value="es-ES">Spanish (ES)</option>
+                          <option value="fr-FR">French (FR)</option>
+                          <option value="de-DE">German (DE)</option>
+                          <option value="ar-SA">Arabic (SA)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-premium text-white text-sm font-black hover:shadow-lg hover:shadow-accent-primary/30 transition-all"
+                  >
+                    <Save size={18} />
+                    Save Tuning
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
             {activeTab === 'quick' && (
               <motion.div
                 key="quick"

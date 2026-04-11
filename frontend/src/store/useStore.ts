@@ -49,14 +49,30 @@ const syncWithBackend = async (state: AppState) => {
   }
 };
 
+const DEFAULT_CONFIG: Partial<UserConfig> = {
+  auto_scan_interval: 24,
+  metadata_language: 'en-US',
+  accent_color: '#3b82f6',
+  glass_intensity: 12,
+  autoplay: true,
+  seek_interval: 10,
+  default_language: 'en',
+  min_seeders: 1,
+  exclude_keywords: ''
+};
+
 export const useStore = create<AppState>((set, get) => ({
   user: JSON.parse(localStorage.getItem('streamFlowUser') || 'null'),
-  config: JSON.parse(localStorage.getItem('streamFlowConfig') || 'null'),
+  config: (() => {
+    const saved = JSON.parse(localStorage.getItem('streamFlowConfig') || 'null');
+    return saved ? { ...DEFAULT_CONFIG, ...saved } : null;
+  })(),
   
   login: (user, data) => {
     localStorage.setItem('streamFlowUser', JSON.stringify(user));
-    if (data.config) {
-      localStorage.setItem('streamFlowConfig', JSON.stringify(data.config));
+    const finalConfig = data.config ? { ...DEFAULT_CONFIG, ...data.config } : get().config;
+    if (finalConfig) {
+      localStorage.setItem('streamFlowConfig', JSON.stringify(finalConfig));
     }
     if (data.userLists) {
       localStorage.setItem('myMovieLists', JSON.stringify(data.userLists));
@@ -66,7 +82,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
     set({ 
       user, 
-      config: data.config || get().config,
+      config: finalConfig,
       userLists: data.userLists || {},
       continueWatching: data.continueWatching || []
     });

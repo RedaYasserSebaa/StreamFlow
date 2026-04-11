@@ -159,12 +159,13 @@ export const srt2vtt = (srt: string) => {
 
 export const searchStreams = async (
   backendUrl: string, 
+  token: string,
   title: string, 
   type: 'movie' | 'tv', 
   seasonEpi?: string,
   year?: string
 ): Promise<Torrent[]> => {
-  const api = getBackendApi(backendUrl);
+  const api = getBackendApi(backendUrl, token);
   const response = await api.post('/api/search', { title, type, seasonEpi, year });
   return response.data.results;
 };

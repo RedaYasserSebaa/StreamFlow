@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --accent-primary: #3b82f6;
+  --glass-blur: 12px;
+}
+
 @layer base {
   body {
     @apply bg-background text-white font-sans antialiased;
@@ -27,7 +32,8 @@
 
 @layer components {
   .glass {
-    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-glass;
+    @apply bg-white/5 border border-white/10 shadow-glass;
+    backdrop-filter: blur(var(--glass-blur, 12px));
   }
   
   .glass-hover {

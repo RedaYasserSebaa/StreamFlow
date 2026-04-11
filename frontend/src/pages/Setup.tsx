@@ -181,14 +181,23 @@ const Setup = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const api = getBackendApi(formData.backend_url);
+      const api = getBackendApi(formData.backend_url, user?.token);
       
       const configToSave = {
         ...formData,
         setup_complete: step === 3
       };
 
+      // Update global config
       await api.post('/api/config', configToSave);
+      
+      // Update user-specific config if logged in
+      if (user?.token) {
+        await api.post('/api/user/data', {
+          config: configToSave
+        });
+      }
+
       setConfig(configToSave);
       
       if (step === 2) {
