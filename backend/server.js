@@ -10,6 +10,7 @@ const torrentStream = require("torrent-stream");
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { deduplicateMedia } = require("./deduplicateMedia");
 
 const app = express();
 // Configuration and Data Paths
@@ -316,31 +317,8 @@ app.get("/api/local", authenticateToken, async (req, res) => {
   if (tvDir) allFiles = allFiles.concat(await scanDirectory(tvDir, "tv"));
 
   const enrichedData = await enrichWithTMDB(allFiles);
-  
-  // Deduplicate TV Shows for the library view
-  const groupedResults = [];
-  const tvMap = new Map();
 
-  for (const item of enrichedData) {
-    if (item.media_type === 'movie') {
-      groupedResults.push(item);
-    } else {
-      // Group by ID if available, otherwise by title
-      const showKey = item.id ? `tmdb_${item.id}` : `title_${item.title.toLowerCase().trim()}`;
-      if (!tvMap.has(showKey)) {
-        tvMap.set(showKey, { 
-          ...item, 
-          isGrouped: true,
-          episodesFound: 1 
-        });
-      } else {
-        const existing = tvMap.get(showKey);
-        existing.episodesFound++;
-      }
-    }
-  }
-
-  const finalResults = [...groupedResults, ...Array.from(tvMap.values())];
+  const finalResults = deduplicateMedia(enrichedData);
   
   localMediaCache.set(cacheKey, {
     data: finalResults,

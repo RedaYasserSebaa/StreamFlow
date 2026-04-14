@@ -13,7 +13,7 @@
     "build:linux": "electron-builder --linux",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "build": {
     "appId": "com.streamflow.app",
@@ -81,6 +81,7 @@
     "electron-builder": "^26.8.1",
     "electron-packager": "^17.1.2",
     "electron-winstaller": "^5.4.0",
+    "jest": "^30.3.0",
     "png-to-ico": "^3.0.1",
     "postcss": "^8.5.9",
     "tailwindcss": "^4.2.2"
