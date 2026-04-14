@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Filter, ChevronDown, Loader2 } from 'lucide-react';
-import { discoverContent, getGenres } from '../api';
+import { discoverContent, getGenres, getApiErrorMessage } from '../api';
 import { useStore } from '../store/useStore';
 import type { Movie } from '../types';
 import MovieCard from '../components/features/MovieCard';
@@ -20,7 +20,7 @@ const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 50 }, (_, i) => currentYear - i);
 
 const Discover = () => {
-  const { config } = useStore();
+  const { config, user, showToast } = useStore();
   const [contentType, setContentType] = useState<ContentType>('movie');
   const [genres, setGenres] = useState<{ id: number; name: string }[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<number | undefined>();
@@ -31,19 +31,24 @@ const Discover = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch genres when content type changes
   useEffect(() => {
-    if (!config?.tmdb_api_key) return;
-    getGenres(config.tmdb_api_key, contentType).then(setGenres).catch(console.error);
-  }, [config, contentType]);
+    if (!config?.backend_url || !user?.token) return;
+    getGenres(config.backend_url, user.token, contentType).then(setGenres).catch(err => {
+      const message = getApiErrorMessage(err);
+      showToast(message, 'error');
+    });
+  }, [config, user, contentType]);
 
   // Fetch results when filters change
   const fetchResults = useCallback(async (pageNum: number = 1) => {
-    if (!config?.tmdb_api_key) return;
+    if (!config?.backend_url || !user?.token) return;
     setLoading(true);
+    setError(null);
     try {
-      const data = await discoverContent(config.tmdb_api_key, contentType, {
+      const data = await discoverContent(config.backend_url, user.token, contentType, {
         genre: selectedGenre,
         year: selectedYear,
         sort: selectedSort,
@@ -57,11 +62,13 @@ const Discover = () => {
       setTotalPages(data.total_pages);
       setPage(pageNum);
     } catch (err) {
-      console.error(err);
+      const message = getApiErrorMessage(err);
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [config, contentType, selectedGenre, selectedYear, selectedSort]);
+  }, [config, user, contentType, selectedGenre, selectedYear, selectedSort]);
 
   useEffect(() => {
     fetchResults(1);
@@ -222,8 +229,17 @@ const Discover = () => {
 
       {!loading && results.length === 0 && (
         <div className="text-center py-20">
-          <p className="text-muted text-lg">No results found for these filters.</p>
-          <p className="text-muted/60 text-sm mt-2">Try adjusting your genre, year, or sort settings.</p>
+          {error ? (
+            <>
+              <p className="text-red-400 text-lg font-semibold">{error}</p>
+              <p className="text-muted/60 text-sm mt-2">Check your TMDB API key in Settings and try again.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-muted text-lg">No results found for these filters.</p>
+              <p className="text-muted/60 text-sm mt-2">Try adjusting your genre, year, or sort settings.</p>
+            </>
+          )}
         </div>
       )}
     </div>

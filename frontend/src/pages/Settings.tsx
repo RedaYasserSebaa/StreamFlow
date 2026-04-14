@@ -76,6 +76,11 @@ const Settings = () => {
     message: ''
   });
 
+  const [tmdbTestStatus, setTmdbTestStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error', message: string }>({
+    type: 'idle',
+    message: ''
+  });
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -122,6 +127,24 @@ const Settings = () => {
       showToast('Failed to save settings', 'error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const testTmdb = async () => {
+    setTmdbTestStatus({ type: 'loading', message: 'Validating...' });
+    try {
+      const api = getBackendApi(formData.backend_url);
+      const res = await api.post('/api/test-tmdb', {
+        tmdb_api_key: formData.tmdb_api_key
+      });
+
+      if (res.data.success) {
+        setTmdbTestStatus({ type: 'success', message: res.data.message || 'Valid!' });
+      } else {
+        setTmdbTestStatus({ type: 'error', message: res.data.error || 'Invalid key' });
+      }
+    } catch (err: any) {
+      setTmdbTestStatus({ type: 'error', message: err.response?.data?.error || 'Validation failed' });
     }
   };
 
@@ -299,13 +322,29 @@ const Settings = () => {
                   <div className="glass p-8 rounded-3xl border border-white/10 space-y-8">
                     {/* TMDB */}
                     <div className="space-y-4">
-                      <label className={labelClasses}><Search size={14} className="text-accent-primary" /> TMDB API Key</label>
+                      <div className="flex items-center justify-between">
+                        <label className={labelClasses}><Search size={14} className="text-accent-primary" /> TMDB API Key</label>
+                        <button 
+                          type="button"
+                          onClick={testTmdb}
+                          className="text-[10px] font-black text-accent-primary hover:underline flex items-center gap-1 uppercase tracking-widest"
+                        >
+                          {tmdbTestStatus.type === 'loading' ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />}
+                          Test Key
+                        </button>
+                      </div>
                       <input 
                         type="password" 
                         className={inputClasses}
                         value={formData.tmdb_api_key || ''}
                         onChange={(e) => setFormData({...formData, tmdb_api_key: e.target.value})}
                       />
+                      {tmdbTestStatus.message && (
+                        <p className={`text-xs font-medium flex items-center gap-1.5 ${tmdbTestStatus.type === 'success' ? 'text-accent-secondary' : tmdbTestStatus.type === 'error' ? 'text-accent-danger' : 'text-muted'}`}>
+                          {tmdbTestStatus.type === 'success' ? <CheckCircle size={14} /> : tmdbTestStatus.type === 'error' ? <Key size={14} /> : null}
+                          {tmdbTestStatus.message}
+                        </p>
+                      )}
                     </div>
 
                     {/* Jackett */}

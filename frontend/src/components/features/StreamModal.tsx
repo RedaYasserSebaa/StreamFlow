@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, PlayCircle, Plus, Loader2, Download, Users, HardDrive, Type, Settings2, FileUp } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { fetchMovieDetails, fetchTVSeason, searchStreams, fetchStreamStats, getImagePath, srt2vtt } from '../../api';
+import { fetchMovieDetails, fetchTVSeason, searchStreams, fetchStreamStats, getImagePath, srt2vtt, getApiErrorMessage } from '../../api';
 import VideoPlayer from './VideoPlayer';
 import TorrentList from './TorrentList';
 import type { Torrent } from '../../types';
@@ -35,14 +35,23 @@ const StreamModal = () => {
   const statsInterval = useRef<any>(null);
 
   useEffect(() => {
-    if (selectedMovie && config?.tmdb_api_key) {
-      fetchMovieDetails(config.tmdb_api_key, selectedMovie.id, selectedMovie.media_type)
+    if (selectedMovie && config?.backend_url && user?.token) {
+      fetchMovieDetails(config.backend_url, user.token, selectedMovie.id, selectedMovie.media_type)
         .then((data: any) => {
           setDetails(data);
           if (selectedMovie.media_type === 'tv') {
             // Initial episodes load
-            fetchTVSeason(config.tmdb_api_key!, selectedMovie.id, 1).then((s: any) => setEpisodes(s.episodes));
+            fetchTVSeason(config.backend_url, user.token!, selectedMovie.id, 1)
+              .then((s: any) => setEpisodes(s.episodes))
+              .catch(err => {
+                const message = getApiErrorMessage(err);
+                showToast(message, 'error');
+              });
           }
+        })
+        .catch(err => {
+          const message = getApiErrorMessage(err);
+          showToast(message, 'error');
         });
     }
 
@@ -53,10 +62,15 @@ const StreamModal = () => {
 
   const handleSeasonChange = async (season: number) => {
     setSelectedSeason(season);
-    if (config?.tmdb_api_key && selectedMovie) {
-      const data = await fetchTVSeason(config.tmdb_api_key, selectedMovie.id, season);
-      setEpisodes(data.episodes);
-      setSelectedEpisode(1);
+    if (config?.backend_url && user?.token && selectedMovie) {
+      try {
+        const data = await fetchTVSeason(config.backend_url, user.token, selectedMovie.id, season);
+        setEpisodes(data.episodes);
+        setSelectedEpisode(1);
+      } catch (err) {
+        const message = getApiErrorMessage(err);
+        showToast(message, 'error');
+      }
     }
   };
 

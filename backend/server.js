@@ -154,16 +154,28 @@ async function scanDirectory(dir, type) {
 }
 
 async function enrichWithTMDB(items) {
-  if (!CONFIG.tmdb_api_key) return items;
+  if (!CONFIG.tmdb_api_key) {
+    console.warn("TMDB API key is not configured. Skipping metadata enrichment for local files.");
+    return items.map(item => ({ ...item, isLocal: true, localId: `local_${Buffer.from(item.localPath).toString('base64').slice(-12)}` }));
+  }
 
   const enriched = [];
+  let invalidKeyDetected = false;
+
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
+
+    // If we already know the key is invalid, skip TMDB calls for remaining items
+    if (invalidKeyDetected) {
+      enriched.push({ ...item, isLocal: true, localId: `local_${Buffer.from(item.localPath).toString('base64').slice(-12)}` });
+      continue;
+    }
+
     try {
       const searchType = item.type === "tv" ? "tv" : "movie";
       const yearParam = item.type === "tv" ? "first_air_date_year" : "primary_release_year";
       
-      const url = `https://api.themoviedb.org/3/search/${searchType}?api_key=${CONFIG.tmdb_api_key}&query=${encodeURIComponent(item.title)}${item.year ? `&${yearParam}=${item.year}` : ""}`;
+      const url = `https://api.themoviedb.org/3/search/${searchType}?api_key=${encodeURIComponent(CONFIG.tmdb_api_key)}&query=${encodeURIComponent(item.title)}${item.year ? `&${yearParam}=${item.year}` : ""}`;
       
       const response = await got(url).json();
       const match = response.results && response.results[0];
@@ -193,8 +205,13 @@ async function enrichWithTMDB(items) {
       
       await new Promise(r => setTimeout(r, 50));
     } catch (err) {
-      console.error(`TMDB enrichment failed for ${item.title}:`, err.message);
-      enriched.push({ ...item, isLocal: true });
+      if (err.response?.statusCode === 401) {
+        console.error("TMDB API key is invalid (401 Unauthorized). Skipping enrichment for remaining items.");
+        invalidKeyDetected = true;
+      } else {
+        console.error(`TMDB enrichment failed for ${item.title}:`, err.message);
+      }
+      enriched.push({ ...item, isLocal: true, localId: `local_${Buffer.from(item.localPath).toString('base64').slice(-12)}` });
     }
   }
   return enriched;
@@ -1094,6 +1111,210 @@ app.get("/api/stream/stats", (req, res) => {
   const progress = total > 0 ? ((downloaded / total) * 100).toFixed(2) : 0;
 
   res.json({ speed, peers, downloaded, progress });
+});
+
+// --- TMDB Proxy Helpers ---
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+
+function getTmdbApiKey(req) {
+  const user = USERS.find(u => u.id === req.user?.id);
+  return user?.config?.tmdb_api_key || CONFIG.tmdb_api_key;
+}
+
+function handleTmdbError(error, res) {
+  const statusCode = error.response?.statusCode;
+  if (statusCode === 401) {
+    return res.status(401).json({
+      error: "Invalid TMDB API key. Please check your API key in Settings."
+    });
+  }
+  if (statusCode === 404) {
+    return res.status(404).json({
+      error: "The requested content was not found on TMDB."
+    });
+  }
+  console.error("TMDB API error:", error.message);
+  return res.status(502).json({
+    error: "Unable to reach TMDB. Please try again later."
+  });
+}
+
+// TMDB API Key Validation Endpoint
+app.post("/api/test-tmdb", async (req, res) => {
+  const { tmdb_api_key } = req.body;
+
+  if (!tmdb_api_key) {
+    return res.status(400).json({
+      success: false,
+      error: "TMDB API key is required"
+    });
+  }
+
+  try {
+    await got(`${TMDB_BASE_URL}/configuration?api_key=${encodeURIComponent(tmdb_api_key)}`).json();
+    res.json({ success: true, message: "TMDB API key is valid!" });
+  } catch (error) {
+    if (error.response?.statusCode === 401) {
+      res.status(401).json({
+        success: false,
+        error: "Invalid TMDB API key. Please double-check and try again."
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: `Cannot connect to TMDB: ${error.message}`
+      });
+    }
+  }
+});
+
+// --- TMDB Proxy Routes ---
+// Home data: trending, popular movies, popular TV
+app.get("/api/tmdb/home", authenticateToken, async (req, res) => {
+  const apiKey = getTmdbApiKey(req);
+  if (!apiKey) {
+    return res.status(503).json({
+      error: "TMDB API key is not configured. Please add your TMDB API key in Settings."
+    });
+  }
+
+  try {
+    const [popMovies, popTv, trending] = await Promise.all([
+      got(`${TMDB_BASE_URL}/movie/popular?api_key=${encodeURIComponent(apiKey)}`).json(),
+      got(`${TMDB_BASE_URL}/tv/popular?api_key=${encodeURIComponent(apiKey)}`).json(),
+      got(`${TMDB_BASE_URL}/trending/all/week?api_key=${encodeURIComponent(apiKey)}`).json(),
+    ]);
+
+    res.json({
+      popularMovies: popMovies.results.map(m => ({ ...m, media_type: 'movie' })),
+      popularTv: popTv.results.map(m => ({ ...m, media_type: 'tv' })),
+      trending: trending.results,
+    });
+  } catch (error) {
+    handleTmdbError(error, res);
+  }
+});
+
+// Search multi
+app.get("/api/tmdb/search", authenticateToken, async (req, res) => {
+  const apiKey = getTmdbApiKey(req);
+  if (!apiKey) {
+    return res.status(503).json({
+      error: "TMDB API key is not configured. Please add your TMDB API key in Settings."
+    });
+  }
+
+  const { query } = req.query;
+  if (!query) {
+    return res.status(400).json({ error: "Search query is required." });
+  }
+
+  try {
+    const data = await got(`${TMDB_BASE_URL}/search/multi?api_key=${encodeURIComponent(apiKey)}&query=${encodeURIComponent(query)}`).json();
+    const results = (data.results || []).filter(r => r.media_type === 'movie' || r.media_type === 'tv');
+    res.json({ results });
+  } catch (error) {
+    handleTmdbError(error, res);
+  }
+});
+
+// Discover content
+app.get("/api/tmdb/discover/:type", authenticateToken, async (req, res) => {
+  const apiKey = getTmdbApiKey(req);
+  if (!apiKey) {
+    return res.status(503).json({
+      error: "TMDB API key is not configured. Please add your TMDB API key in Settings."
+    });
+  }
+
+  const { type } = req.params;
+  if (type !== 'movie' && type !== 'tv') {
+    return res.status(400).json({ error: "Type must be 'movie' or 'tv'." });
+  }
+
+  const endpoint = type === 'movie' ? '/discover/movie' : '/discover/tv';
+  const queryParams = new URLSearchParams({ api_key: apiKey });
+
+  if (req.query.sort_by) queryParams.set('sort_by', req.query.sort_by);
+  if (req.query.page) queryParams.set('page', req.query.page);
+  if (req.query.with_genres) queryParams.set('with_genres', req.query.with_genres);
+  if (req.query.primary_release_year) queryParams.set('primary_release_year', req.query.primary_release_year);
+  if (req.query.first_air_date_year) queryParams.set('first_air_date_year', req.query.first_air_date_year);
+
+  try {
+    const data = await got(`${TMDB_BASE_URL}${endpoint}?${queryParams.toString()}`).json();
+    res.json({
+      results: (data.results || []).map(m => ({ ...m, media_type: type })),
+      total_pages: data.total_pages,
+    });
+  } catch (error) {
+    handleTmdbError(error, res);
+  }
+});
+
+// Genres
+app.get("/api/tmdb/genres/:type", authenticateToken, async (req, res) => {
+  const apiKey = getTmdbApiKey(req);
+  if (!apiKey) {
+    return res.status(503).json({
+      error: "TMDB API key is not configured. Please add your TMDB API key in Settings."
+    });
+  }
+
+  const { type } = req.params;
+  if (type !== 'movie' && type !== 'tv') {
+    return res.status(400).json({ error: "Type must be 'movie' or 'tv'." });
+  }
+
+  const endpoint = type === 'movie' ? '/genre/movie/list' : '/genre/tv/list';
+
+  try {
+    const data = await got(`${TMDB_BASE_URL}${endpoint}?api_key=${encodeURIComponent(apiKey)}`).json();
+    res.json({ genres: data.genres });
+  } catch (error) {
+    handleTmdbError(error, res);
+  }
+});
+
+// Movie/TV Details
+app.get("/api/tmdb/details/:type/:id", authenticateToken, async (req, res) => {
+  const apiKey = getTmdbApiKey(req);
+  if (!apiKey) {
+    return res.status(503).json({
+      error: "TMDB API key is not configured. Please add your TMDB API key in Settings."
+    });
+  }
+
+  const { type, id } = req.params;
+  if (type !== 'movie' && type !== 'tv') {
+    return res.status(400).json({ error: "Type must be 'movie' or 'tv'." });
+  }
+
+  try {
+    const data = await got(`${TMDB_BASE_URL}/${type}/${id}?api_key=${encodeURIComponent(apiKey)}`).json();
+    res.json(data);
+  } catch (error) {
+    handleTmdbError(error, res);
+  }
+});
+
+// TV Season Details
+app.get("/api/tmdb/tv/:id/season/:seasonNumber", authenticateToken, async (req, res) => {
+  const apiKey = getTmdbApiKey(req);
+  if (!apiKey) {
+    return res.status(503).json({
+      error: "TMDB API key is not configured. Please add your TMDB API key in Settings."
+    });
+  }
+
+  const { id, seasonNumber } = req.params;
+
+  try {
+    const data = await got(`${TMDB_BASE_URL}/tv/${id}/season/${seasonNumber}?api_key=${encodeURIComponent(apiKey)}`).json();
+    res.json(data);
+  } catch (error) {
+    handleTmdbError(error, res);
+  }
 });
 
 // Test Jackett Connection Endpoint

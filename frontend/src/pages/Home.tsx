@@ -1,24 +1,30 @@
 import { useEffect, useState } from 'react';
-import { fetchHomeData } from '../api';
+import { fetchHomeData, getApiErrorMessage } from '../api';
 import { useStore } from '../store/useStore';
 import type { Movie } from '../types';
 import MovieCard from '../components/features/MovieCard';
 
 const Home = () => {
-  const { config, continueWatching } = useStore();
+  const { config, user, continueWatching, showToast } = useStore();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (config?.tmdb_api_key) {
-      fetchHomeData(config.tmdb_api_key).then((res) => {
+    if (config?.backend_url && user?.token) {
+      fetchHomeData(config.backend_url, user.token).then((res) => {
+        setError(null);
         setData(res);
-      }).catch(err => console.error(err))
+      }).catch(err => {
+        const message = getApiErrorMessage(err);
+        setError(message);
+        showToast(message, 'error');
+      })
       .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, [config]);
+  }, [config, user]);
 
   const renderRow = (title: string, movies: Movie[]) => (
     <div className="mb-12">
@@ -38,6 +44,15 @@ const Home = () => {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-accent-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-400 text-lg font-semibold">{error}</p>
+        <p className="text-muted/60 text-sm mt-2">Check your TMDB API key in Settings and try again.</p>
       </div>
     );
   }

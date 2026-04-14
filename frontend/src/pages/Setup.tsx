@@ -42,6 +42,11 @@ const Setup = () => {
     message: ''
   });
 
+  const [tmdbTestStatus, setTmdbTestStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error', message: string }>({
+    type: 'idle',
+    message: ''
+  });
+
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -135,6 +140,24 @@ const Setup = () => {
       showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const testTmdb = async () => {
+    setTmdbTestStatus({ type: 'loading', message: 'Validating...' });
+    try {
+      const api = getBackendApi(formData.backend_url);
+      const res = await api.post('/api/test-tmdb', {
+        tmdb_api_key: formData.tmdb_api_key
+      });
+
+      if (res.data.success) {
+        setTmdbTestStatus({ type: 'success', message: res.data.message || 'Valid!' });
+      } else {
+        setTmdbTestStatus({ type: 'error', message: res.data.error || 'Invalid key' });
+      }
+    } catch (err: any) {
+      setTmdbTestStatus({ type: 'error', message: err.response?.data?.error || 'Validation failed' });
     }
   };
 
@@ -409,9 +432,20 @@ const Setup = () => {
             >
               {/* TMDB Section */}
               <section className="space-y-4">
-                <div className="flex items-center gap-2 text-accent-primary font-semibold text-sm">
-                  <Key size={16} />
-                  THEMOVIEDB (TMDB) API
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-accent-primary font-semibold text-sm">
+                    <Key size={16} />
+                    THEMOVIEDB (TMDB) API
+                  </div>
+                  <button
+                    type="button"
+                    onClick={testTmdb}
+                    disabled={tmdbTestStatus.type === 'loading' || !formData.tmdb_api_key}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface hover:bg-white/10 text-sm font-medium transition-colors border border-white/5 disabled:opacity-50"
+                  >
+                    {tmdbTestStatus.type === 'loading' ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                    Test TMDB
+                  </button>
                 </div>
                 <div className="space-y-2">
                   <input
@@ -422,10 +456,18 @@ const Setup = () => {
                     value={formData.tmdb_api_key}
                     onChange={(e) => setFormData({...formData, tmdb_api_key: e.target.value})}
                   />
-                  <p className="text-[10px] text-muted flex items-center gap-1 px-1">
-                    <AlertCircle size={10} />
-                    Get it from <a href="https://www.themoviedb.org/settings/api" target="_blank" className="text-accent-primary hover:underline">themoviedb.org</a>
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-muted flex items-center gap-1 px-1">
+                      <AlertCircle size={10} />
+                      Get it from <a href="https://www.themoviedb.org/settings/api" target="_blank" className="text-accent-primary hover:underline">themoviedb.org</a>
+                    </p>
+                    {tmdbTestStatus.message && (
+                      <span className={`text-xs font-medium flex items-center gap-1.5 ${tmdbTestStatus.type === 'success' ? 'text-accent-secondary' : tmdbTestStatus.type === 'error' ? 'text-accent-danger' : 'text-muted'}`}>
+                        {tmdbTestStatus.type === 'success' ? <CheckCircle size={14} /> : tmdbTestStatus.type === 'error' ? <AlertCircle size={14} /> : null}
+                        {tmdbTestStatus.message}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </section>
 

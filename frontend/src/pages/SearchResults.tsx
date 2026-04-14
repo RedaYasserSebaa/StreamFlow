@@ -1,29 +1,33 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Loader2 } from 'lucide-react';
-import { searchMovies } from '../api';
+import { searchMovies, getApiErrorMessage } from '../api';
 import { useStore } from '../store/useStore';
 import type { Movie } from '../types';
 import MovieCard from '../components/features/MovieCard';
 
 const SearchResults = () => {
-  const { config, searchQuery } = useStore();
+  const { config, user, searchQuery, showToast } = useStore();
   const [results, setResults] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const performSearch = async () => {
-      if (!config?.tmdb_api_key || !searchQuery.trim()) {
+      if (!config?.backend_url || !user?.token || !searchQuery.trim()) {
         setResults([]);
         return;
       }
 
       setLoading(true);
+      setError(null);
       try {
-        const data = await searchMovies(config.tmdb_api_key, searchQuery);
+        const data = await searchMovies(config.backend_url, user.token, searchQuery);
         setResults(data);
       } catch (err) {
-        console.error(err);
+        const message = getApiErrorMessage(err);
+        setError(message);
+        showToast(message, 'error');
       } finally {
         setLoading(false);
       }
@@ -31,7 +35,7 @@ const SearchResults = () => {
 
     const timer = setTimeout(performSearch, 500); // Debounce
     return () => clearTimeout(timer);
-  }, [config, searchQuery]);
+  }, [config, user, searchQuery]);
 
   return (
     <div className="pb-12 text-white">
@@ -48,6 +52,11 @@ const SearchResults = () => {
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={48} className="animate-spin text-accent-primary" />
+        </div>
+      ) : error ? (
+        <div className="text-center py-20">
+          <p className="text-red-400 text-lg font-semibold">{error}</p>
+          <p className="text-muted/60 text-sm mt-2">Check your TMDB API key in Settings and try again.</p>
         </div>
       ) : results.length > 0 ? (
         <motion.div 
