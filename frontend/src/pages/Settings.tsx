@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Lock, Key, Search, HardDrive, Save, 
+import {
+  Lock, Key, Search, HardDrive, Save,
   CheckCircle, Loader2, Network, ShieldCheck,
   ChevronRight, Laptop, FolderOpen, Database, Zap, Smartphone,
-  RefreshCw
+  RefreshCw, Trash2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { getBackendApi, changePassword, authorizeQuickConnectDevice } from '../api';
+import { getBackendApi, changePassword, authorizeQuickConnectDevice, logoutUser } from '../api';
 import type { UserConfig } from '../types';
 
 const Settings = () => {
@@ -96,6 +96,26 @@ const Settings = () => {
       showToast(err.response?.data?.error || 'Failed to update password', 'error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      if (!user?.token || !config?.backend_url) return;
+      await axios.delete(`${config.backend_url}/api/auth/delete-me`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      showToast('Account deleted successfully', 'success');
+      logoutUser();
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Failed to delete account', 'error');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -233,8 +253,8 @@ const Settings = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2 md:col-span-2">
                        <label className={labelClasses}><Lock size={12} /> Current Password</label>
-                       <input 
-                         type="password" 
+                       <input
+                         type="password"
                          className={inputClasses}
                          placeholder="Confirm your current identity"
                          required
@@ -244,8 +264,8 @@ const Settings = () => {
                     </div>
                     <div className="space-y-2">
                        <label className={labelClasses}><Key size={12} /> New Password</label>
-                       <input 
-                         type="password" 
+                       <input
+                         type="password"
                          className={inputClasses}
                          placeholder="Choose a strong password"
                          required
@@ -255,8 +275,8 @@ const Settings = () => {
                     </div>
                     <div className="space-y-2">
                        <label className={labelClasses}><CheckCircle size={12} /> Confirm New Password</label>
-                       <input 
-                         type="password" 
+                       <input
+                         type="password"
                          className={inputClasses}
                          placeholder="Repeat your new password"
                          required
@@ -274,6 +294,74 @@ const Settings = () => {
                     Update Password
                   </button>
                 </form>
+
+                <div className="border-t border-white/10 pt-8">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+                      <Trash2 className="text-red-500" size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-white">Delete Account</h2>
+                      <p className="text-sm text-muted">Permanently remove your account and all data</p>
+                    </div>
+                  </div>
+                  <div className="glass p-6 rounded-3xl border border-red-500/20">
+                    <p className="text-sm text-red-400/80 mb-6">
+                      This action cannot be undone. Your account, watch history, and preferences will be permanently deleted.
+                    </p>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteModal(true)}
+                        className="px-6 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all text-sm font-black"
+                      >
+                        Delete Account
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {showDeleteModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="glass max-w-md w-full p-8 rounded-3xl border border-red-500/20"
+                    >
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="p-3 rounded-2xl bg-red-500/20">
+                          <Trash2 className="text-red-500" size={28} />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-white">Delete Account?</h3>
+                          <p className="text-sm text-muted">This cannot be undone</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted mb-8">
+                        Are you sure you want to delete your account? All your data including watch history, lists, and preferences will be permanently removed.
+                      </p>
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setShowDeleteModal(false)}
+                          disabled={isDeleting}
+                          className="flex-1 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-sm font-black disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteAccount}
+                          disabled={isDeleting}
+                          className="flex-1 px-6 py-3 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all text-sm font-black disabled:opacity-50"
+                        >
+                          {isDeleting ? <Loader2 size={18} className="animate-spin" /> : 'Yes, Delete'}
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
               </motion.div>
             )}
 

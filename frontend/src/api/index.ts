@@ -55,6 +55,15 @@ export const deleteCurrentUser = async (baseUrl: string, token: string) => {
   return response.data;
 };
 
+export const logoutUser = () => {
+  localStorage.removeItem('streamFlowUser');
+  localStorage.removeItem('streamFlowConfig');
+  localStorage.removeItem('myMovieLists');
+  localStorage.removeItem('continueWatching');
+  localStorage.removeItem('subtitleStyle');
+  window.location.href = '/';
+};
+
 export const changePassword = async (baseUrl: string, token: string, data: any) => {
   const api = getBackendApi(baseUrl, token);
   const response = await api.post('/api/auth/change-password', data);
