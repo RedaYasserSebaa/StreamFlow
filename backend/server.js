@@ -280,6 +280,20 @@ function findLocalMatch(searchTitle, type, season = null, episode = null, year =
 app.use(cors());
 app.use(express.json());
 
+// Content Security Policy (CSP) Middleware
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self' http://localhost:7676; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: https://image.tmdb.org https://api.themoviedb.org; " +
+    "media-src 'self' blob: http://localhost:7676; " +
+    "connect-src 'self' http://localhost:7676 https://api.themoviedb.org;"
+  );
+  next();
+});
+
 // Auth Middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];

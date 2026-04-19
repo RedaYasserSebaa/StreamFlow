@@ -18,6 +18,7 @@
   "build": {
     "appId": "com.streamflow.app",
     "productName": "StreamFlow",
+    "icon": "assets/favicon.png",
     "publish": [
       {
         "provider": "github",
@@ -26,7 +27,8 @@
       }
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/favicon.ico"
     },
     "linux": {
       "target": "deb",
