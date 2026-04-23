@@ -1,11 +1,18 @@
 {
   "name": "streamflow-app",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "StreamFlow: A seamless torrent streaming and media management application.",
   "main": "main.js",
   "bin": {
-    "streamflow-app": "server.js"
+    "streamflow-app": "backend/server.js"
   },
+  "files": [
+    "backend",
+    "frontend/dist",
+    "assets",
+    "main.js",
+    "package.json"
+  ],
   "scripts": {
     "start": "electron .",
     "server": "node backend/server.js",
