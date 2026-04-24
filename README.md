@@ -4,41 +4,31 @@
 
 # Stream Flow
 
-Welcome to **Stream Flow**, a standalone application that integrates movie and TV show discovery with automated torrent searching and **direct browser-based media streaming**. This app bypasses the need for manual downloads and provides an UI for your own torrent streams!
+Welcome to **Stream Flow**, a standalone application that integrates movie and TV show discovery with automated torrent searching and **direct browser-based media streaming**. This app bypasses the need for manual downloads and provides a beautiful UI for your own torrent streams!
 
 > [!WARNING]
-> **Under Development:** Stream Flow is currently in active development. You may encounter bugs, performance issues, or incomplete features. Your feedback and contributions are highly appreciated!
+> **Under Development:** Stream Flow is currently in active development. You may encounter bugs, performance issues, or incomplete features. Your feedback and contributions are appreciated!
 
 ---
 
 ## 🚀 How to Install and Use
 
-You can install Stream Flow using one of three methods:
-
-### Method 1: Using the Installer (Windows `.exe` or Linux `.deb`)
-1. **Download:** Go to the **Releases** tab on this GitHub repository and download the latest Windows `.exe` or Linux `.deb` installer.
-2. **Install:** Double click the file or run `sudo dpkg -i streamflow.deb` to install the application.
-3. **Run:** Once installed, Stream Flow runs as a lightweight background server and will automatically open the streaming UI in your default web browser.
-
-### Method 2: Using NPM (NodeJS)
-If you already have NodeJS installed, you can download and run the application entirely from the terminal:
-1. **Install globally:**
-   ```bash
-   npm install -g streamflow-app
-   ```
-2. **Run:**
-   ```bash
-   streamflow-app
-   ```
-   *The server will start on port 7676. Open `http://localhost:7676` in your browser.*
-
-### Method 3: Using Docker (Headless Server)
-For server administrators or NAS setups, you can run the headless Stream Flow container:
+### Method 1: Using Docker (Recommended)
+For server administrators, NAS setups, or Linux users, Docker is the fastest and most reliable way to run Stream Flow:
 1. **Pull and Run the image:**
    ```bash
-   docker run -d -p 7676:7676 redayasser/streamflow:latest
+   docker run -d -p 7676:7676 --name streamflow redayasser/streamflow:latest
    ```
 2. **Access:** Open `http://localhost:7676` in your browser.
+3. **Data Persistence (Optional):** To keep your configuration across updates:
+   ```bash
+   docker run -d -p 7676:7676 -v streamflow_data:/app/data --name streamflow redayasser/streamflow:latest
+   ```
+
+### Method 2: Using the Windows Installer
+1. **Download:** Go to the **Releases** tab on this GitHub repository and download the latest `StreamFlow Setup.exe`.
+2. **Install:** Double-click the file to install the application.
+3. **Run:** Once installed, Stream Flow runs as a lightweight background server and will automatically open the streaming UI in your default web browser.
 
 ### Initial Setup Requirements
 When you first launch the app, you will be directed to a setup page that requires two external services:
@@ -56,7 +46,7 @@ When you first launch the app, you will be directed to a setup page that require
 
 ## 🛠️ Local Development 
 
-If you are a developer and wish to run the app from source, modify the code, or build the installer yourself:
+If you are a developer and wish to run the app from source:
 
 1. **Clone the project**
    ```bash
@@ -71,11 +61,6 @@ If you are a developer and wish to run the app from source, modify the code, or 
    ```bash
    npm start
    ```
-4. **Build the Standalone Windows Installer yourself**
-   ```bash
-   npm run build
-   ```
-   *The built `.exe` will be saved to the `dist-installer/` directory.*
 
 ---
 
