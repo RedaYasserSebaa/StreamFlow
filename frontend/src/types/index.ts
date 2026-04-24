@@ -44,6 +44,7 @@ export interface UserConfig {
   // Appearance
   accent_color?: string;
   glass_intensity?: number;
+  avatar?: string;
   
   // Player
   autoplay?: boolean;

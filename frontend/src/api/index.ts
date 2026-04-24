@@ -20,6 +20,22 @@ export const getBackendApi = (baseUrl: string, token?: string) => {
     baseURL: baseUrl,
     headers
   });
+
+  // Global handler to log out user if token is invalid or server DB was wiped
+  instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 401) {
+        localStorage.removeItem('streamFlowUser');
+        localStorage.removeItem('streamFlowConfig');
+        localStorage.removeItem('myMovieLists');
+        localStorage.removeItem('continueWatching');
+        window.location.href = '/';
+      }
+      return Promise.reject(error);
+    }
+  );
+
   return instance;
 };
 
@@ -33,6 +49,18 @@ export const loginUser = async (baseUrl: string, credentials: any) => {
 export const registerUser = async (baseUrl: string, credentials: any) => {
   const api = getBackendApi(baseUrl);
   const response = await api.post('/api/auth/register', credentials);
+  return response.data;
+};
+
+export const fetchProfiles = async (baseUrl: string) => {
+  const api = getBackendApi(baseUrl);
+  const response = await api.get('/api/auth/users');
+  return response.data;
+};
+
+export const loginProfile = async (baseUrl: string, userId: string) => {
+  const api = getBackendApi(baseUrl);
+  const response = await api.post('/api/auth/login-profile', { id: userId });
   return response.data;
 };
 

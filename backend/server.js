@@ -359,6 +359,12 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: "Forbidden" });
+    
+    // Ensure the user actually exists in the database (handles server restarts/wipes)
+    if (!USERS.find(u => u.id === user.id)) {
+      return res.status(401).json({ error: "User session invalid or deleted" });
+    }
+    
     req.user = user;
     next();
   });
@@ -455,6 +461,37 @@ app.post("/api/auth/login", async (req, res) => {
 
   if (!user || !(await bcrypt.compare(password, user.password))) {
     return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+  res.json({ 
+    success: true, 
+    token, 
+    user: { 
+      username: user.username, 
+      config: user.config,
+      userLists: user.userLists,
+      continueWatching: user.continueWatching
+    } 
+  });
+});
+
+app.get("/api/auth/users", (req, res) => {
+  const safeUsers = USERS.map(u => ({
+    id: u.id,
+    username: u.username,
+    accent_color: u.config?.accent_color || '#3b82f6',
+    avatar: u.config?.avatar
+  }));
+  res.json({ success: true, users: safeUsers });
+});
+
+app.post("/api/auth/login-profile", (req, res) => {
+  const { id } = req.body;
+  const user = USERS.find(u => u.id === id);
+
+  if (!user) {
+    return res.status(404).json({ error: "User profile not found" });
   }
 
   const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);

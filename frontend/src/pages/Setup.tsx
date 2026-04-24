@@ -9,15 +9,16 @@ import { useStore } from '../store/useStore';
 import { 
   getBackendApi, loginUser, registerUser, 
   deleteCurrentUser, pollQuickConnectStatus, 
-  generateQuickConnectCode
+  generateQuickConnectCode, fetchProfiles, loginProfile
 } from '../api';
 
 const Setup = () => {
   const { config, setConfig, login, logout, showToast, isAuthenticated, user } = useStore();
   const [step, setStep] = useState(1);
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'quick'>('signup');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'quick' | 'profiles'>('signup');
   const [quickCode, setQuickCode] = useState<{ code: string, expiresAt: number } | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [profiles, setProfiles] = useState<any[]>([]);
   
   const [authData, setAuthData] = useState({
     username: '',
@@ -100,6 +101,23 @@ const Setup = () => {
   }, [authMode, quickCode, formData.backend_url, isLoading]);
 
   useEffect(() => {
+    if (step === 1 && !isAuthenticated()) {
+      const loadProfiles = async () => {
+        try {
+          const res = await fetchProfiles(formData.backend_url);
+          if (res.success && res.users && res.users.length > 0) {
+            setProfiles(res.users);
+            setAuthMode('profiles');
+          }
+        } catch (err) {
+          // Silent fail
+        }
+      };
+      loadProfiles();
+    }
+  }, [formData.backend_url, isAuthenticated, step]);
+
+  useEffect(() => {
     if (isAuthenticated() && step === 1) {
       setStep(2);
     }
@@ -133,6 +151,25 @@ const Setup = () => {
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Authentication failed. Please try again.';
       showToast(errorMsg, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleProfileLogin = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      const res = await loginProfile(formData.backend_url, userId);
+      if (res.success) {
+        login({ username: res.user.username, token: res.token }, res.user);
+        showToast(`Welcome back, ${res.user.username}!`, 'success');
+        setStep(2);
+        if (res.user.config) {
+          setFormData(f => ({ ...f, ...res.user.config }));
+        }
+      }
+    } catch (err: any) {
+      showToast(err.response?.data?.error || 'Failed to login with profile', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -257,7 +294,50 @@ const Setup = () => {
               exit={{ x: 20, opacity: 0 }}
               className="space-y-6"
             >
-              {authMode === 'quick' ? (
+              {authMode === 'profiles' ? (
+                <div className="space-y-8 pb-4">
+                  <div className="text-center space-y-2 mb-8">
+                    <h3 className="font-bold text-xl">Who's watching?</h3>
+                    <p className="text-sm text-muted">Select your profile to continue</p>
+                  </div>
+
+                  <div className="flex flex-wrap justify-center gap-8">
+                    {profiles.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleProfileLogin(p.id)}
+                        disabled={isLoading}
+                        className="flex flex-col items-center gap-4 group transition-all hover:scale-105 disabled:opacity-50"
+                      >
+                        <div 
+                          className="w-28 h-28 rounded-full flex items-center justify-center shadow-lg border-4 border-transparent group-hover:border-white transition-all shadow-black/50 overflow-hidden"
+                          style={{ backgroundColor: !p.avatar ? p.accent_color : 'transparent' }}
+                        >
+                          {p.avatar ? (
+                            <img src={p.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-5xl font-black text-white drop-shadow-md">{p.username.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <span className="font-bold text-muted group-hover:text-white transition-colors">{p.username}</span>
+                      </button>
+                    ))}
+                    
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode('signup')}
+                      disabled={isLoading}
+                      className="flex flex-col items-center gap-4 group transition-all hover:scale-105 disabled:opacity-50"
+                    >
+                      <div className="w-28 h-28 rounded-full flex items-center justify-center shadow-lg border-4 border-white/10 bg-white/5 group-hover:border-white/30 transition-all">
+                        <UserPlus size={40} className="text-muted group-hover:text-white transition-colors" />
+                      </div>
+                      <span className="font-bold text-muted group-hover:text-white transition-colors">Add Profile</span>
+                    </button>
+                  </div>
+                </div>
+              ) : authMode === 'quick' ? (
                 <div className="space-y-6">
                   <div className="space-y-4">
                     <div className="w-16 h-16 bg-accent-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-accent-primary/20">
@@ -393,6 +473,17 @@ const Setup = () => {
                         <Smartphone size={14} />
                         Login with Quick Connect
                       </button>
+                      
+                      {profiles.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setAuthMode('profiles')}
+                          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted hover:text-accent-primary transition-all mt-2"
+                        >
+                          <User size={14} />
+                          Back to Profiles
+                        </button>
+                      )}
                     </div>
                   </div>
                 </form>
