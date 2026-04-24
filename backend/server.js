@@ -593,15 +593,60 @@ app.post("/api/user/data", authenticateToken, (req, res) => {
   res.json({ success: true });
 });
 
-// Serve static frontend files
-const distPath = path.join(__dirname, "../frontend/dist");
-if (fs.existsSync(distPath)) {
-  console.log("Serving frontend from /frontend/dist");
+// Serve static frontend files with robust path detection
+const possibleDistPaths = [
+  path.join(__dirname, "../frontend/dist"),
+  path.join(__dirname, "frontend/dist"),
+  path.join(process.cwd(), "frontend/dist"),
+  path.join(process.cwd(), "dist"),
+  path.join(__dirname, "../../frontend/dist"),
+];
+
+let distPath = null;
+for (const p of possibleDistPaths) {
+  try {
+    if (fs.existsSync(p) && fs.statSync(p).isDirectory()) {
+      distPath = p;
+      break;
+    }
+  } catch (e) {
+    // Ignore errors for non-existent paths
+  }
+}
+
+// Debug Endpoint to help troubleshoot path issues in production
+app.get("/api/debug", (req, res) => {
+  res.json({
+    cwd: process.cwd(),
+    dirname: __dirname,
+    detectedDist: distPath,
+    exists: distPath ? fs.existsSync(distPath) : false,
+    env: process.env.NODE_ENV,
+    configDir: CONFIG_DIR,
+    searchedPaths: possibleDistPaths
+  });
+});
+
+if (distPath) {
+  console.log(`Serving frontend from: ${distPath}`);
   app.use(express.static(distPath));
+  
+  // SPA Catch-all: Route all non-API requests to index.html for React Router support
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/.well-known')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
 } else {
-  console.log("Serving frontend from legacy folder");
-  const legacyPath = path.join(__dirname, "../legacy");
-  app.use(express.static(legacyPath));
+  console.warn("⚠️ WARNING: Frontend assets not found in any common location!");
+  app.get('/', (req, res) => {
+    res.status(404).send(`
+      <div style="font-family: sans-serif; padding: 2rem; text-align: center;">
+        <h1 style="color: #ef4444;">StreamFlow: Frontend Not Found</h1>
+        <p>The server is running, but the UI assets could not be located.</p>
+        <p>Check <a href="/api/debug">/api/debug</a> for path information.</p>
+      </div>
+    `);
+  });
 }
 
 // Function to search real torrents using Jackett
