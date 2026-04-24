@@ -2,6 +2,6 @@
 .git
 .dockerignore
 Dockerfile
-/dist
-/dist-installer
+dist
+dist-installer
 winCodeSign.7z

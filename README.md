@@ -7,7 +7,7 @@
 Welcome to **Stream Flow**, a standalone application that integrates movie and TV show discovery with automated torrent searching and **direct browser-based media streaming**. This app bypasses the need for manual downloads and provides a beautiful UI for your own torrent streams!
 
 > [!WARNING]
-> **Under Development:** Stream Flow is currently in active development. You may encounter bugs, performance issues, or incomplete features. Your feedback and contributions are highly appreciated!
+> **Under Development:** Stream Flow is currently in active development. You may encounter bugs, performance issues, or incomplete features. Your feedback and contributions are appreciated!
 
 ---
 
@@ -17,7 +17,7 @@ Welcome to **Stream Flow**, a standalone application that integrates movie and T
 For server administrators, NAS setups, or Linux users, Docker is the fastest and most reliable way to run Stream Flow:
 1. **Pull and Run the image:**
    ```bash
-   docker run -d -p 7676:7676 redayasser/streamflow:latest
+   docker run -d -p 7676:7676 --name streamflow redayasser/streamflow:latest
    ```
 2. **Access:** Open `http://localhost:7676` in your browser.
 3. **Data Persistence (Optional):** To keep your configuration across updates:

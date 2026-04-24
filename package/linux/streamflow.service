@@ -5,10 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=root
-# Point to the unpacked directory since node cannot read from ASAR directly
-WorkingDirectory=/opt/StreamFlow/resources/app.asar.unpacked
-# Use the system node binary to avoid GUI/X11 dependencies of the Electron wrapper
-ExecStart=/usr/bin/node /opt/StreamFlow/resources/app.asar.unpacked/backend/server.js
+WorkingDirectory=/opt/StreamFlow/resources/app
+# Use the bundled electron to run the server with the correct entry point
+ExecStart=/opt/StreamFlow/streamflow-app --no-sandbox backend/server.js
 Restart=on-failure
 StandardOutput=append:/var/log/streamflow.log
 StandardError=append:/var/log/streamflow.log

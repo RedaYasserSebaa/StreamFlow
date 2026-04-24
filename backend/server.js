@@ -17,26 +17,9 @@ const app = express();
 const args = process.argv.slice(2);
 if (args.includes('--setup-service')) {
   const isRoot = process.getuid && process.getuid() === 0;
-  const isLinux = process.platform === 'linux';
-  
-  let nodePath = process.execPath;
-  let scriptPath = path.resolve(__filename);
-  let workingDir = path.dirname(path.dirname(scriptPath));
-
-  // If running on Linux, prefer system node to avoid Electron GUI dependencies in headless mode
-  if (isLinux && fs.existsSync('/usr/bin/node')) {
-    nodePath = '/usr/bin/node';
-  }
-
-  // Handle ASAR unpacking paths if we are currently running inside an ASAR
-  if (scriptPath.includes('app.asar') && !scriptPath.includes('app.asar.unpacked')) {
-    const unpackedPath = scriptPath.replace('app.asar', 'app.asar.unpacked');
-    if (fs.existsSync(unpackedPath)) {
-      scriptPath = unpackedPath;
-      workingDir = workingDir.replace('app.asar', 'app.asar.unpacked');
-    }
-  }
-
+  const nodePath = process.execPath;
+  const scriptPath = path.resolve(__filename);
+  const workingDir = path.dirname(path.dirname(scriptPath));
   const user = isRoot ? 'root' : process.env.USER || 'root';
 
   const serviceContent = `[Unit]
@@ -610,60 +593,15 @@ app.post("/api/user/data", authenticateToken, (req, res) => {
   res.json({ success: true });
 });
 
-// Serve static frontend files with robust path detection
-const possibleDistPaths = [
-  path.join(__dirname, "../frontend/dist"),
-  path.join(__dirname, "frontend/dist"),
-  path.join(process.cwd(), "frontend/dist"),
-  path.join(process.cwd(), "dist"),
-  path.join(__dirname, "../../frontend/dist"),
-];
-
-let distPath = null;
-for (const p of possibleDistPaths) {
-  try {
-    if (fs.existsSync(p) && fs.statSync(p).isDirectory()) {
-      distPath = p;
-      break;
-    }
-  } catch (e) {
-    // Ignore errors for non-existent paths
-  }
-}
-
-// Debug Endpoint to help troubleshoot path issues in production
-app.get("/api/debug", (req, res) => {
-  res.json({
-    cwd: process.cwd(),
-    dirname: __dirname,
-    detectedDist: distPath,
-    exists: distPath ? fs.existsSync(distPath) : false,
-    env: process.env.NODE_ENV,
-    configDir: CONFIG_DIR,
-    searchedPaths: possibleDistPaths
-  });
-});
-
-if (distPath) {
-  console.log(`Serving frontend from: ${distPath}`);
+// Serve static frontend files
+const distPath = path.join(__dirname, "../frontend/dist");
+if (fs.existsSync(distPath)) {
+  console.log("Serving frontend from /frontend/dist");
   app.use(express.static(distPath));
-  
-  // SPA Catch-all: Route all non-API requests to index.html for React Router support
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/.well-known')) return next();
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
 } else {
-  console.warn("⚠️ WARNING: Frontend assets not found in any common location!");
-  app.get('/', (req, res) => {
-    res.status(404).send(`
-      <div style="font-family: sans-serif; padding: 2rem; text-align: center;">
-        <h1 style="color: #ef4444;">StreamFlow: Frontend Not Found</h1>
-        <p>The server is running, but the UI assets could not be located.</p>
-        <p>Check <a href="/api/debug">/api/debug</a> for path information.</p>
-      </div>
-    `);
-  });
+  console.log("Serving frontend from legacy folder");
+  const legacyPath = path.join(__dirname, "../legacy");
+  app.use(express.static(legacyPath));
 }
 
 // Function to search real torrents using Jackett
