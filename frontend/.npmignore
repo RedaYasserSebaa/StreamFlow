@@ -1,0 +1,1 @@
+# Empty .npmignore to override .gitignore so that frontend/dist is included in the NPM package.

@@ -17,9 +17,26 @@ const app = express();
 const args = process.argv.slice(2);
 if (args.includes('--setup-service')) {
   const isRoot = process.getuid && process.getuid() === 0;
-  const nodePath = process.execPath;
-  const scriptPath = path.resolve(__filename);
-  const workingDir = path.dirname(path.dirname(scriptPath));
+  const isLinux = process.platform === 'linux';
+  
+  let nodePath = process.execPath;
+  let scriptPath = path.resolve(__filename);
+  let workingDir = path.dirname(path.dirname(scriptPath));
+
+  // If running on Linux, prefer system node to avoid Electron GUI dependencies in headless mode
+  if (isLinux && fs.existsSync('/usr/bin/node')) {
+    nodePath = '/usr/bin/node';
+  }
+
+  // Handle ASAR unpacking paths if we are currently running inside an ASAR
+  if (scriptPath.includes('app.asar') && !scriptPath.includes('app.asar.unpacked')) {
+    const unpackedPath = scriptPath.replace('app.asar', 'app.asar.unpacked');
+    if (fs.existsSync(unpackedPath)) {
+      scriptPath = unpackedPath;
+      workingDir = workingDir.replace('app.asar', 'app.asar.unpacked');
+    }
+  }
+
   const user = isRoot ? 'root' : process.env.USER || 'root';
 
   const serviceContent = `[Unit]
