@@ -14,12 +14,14 @@
     "package.json"
   ],
   "scripts": {
+    "postinstall": "echo \"\n🚀 StreamFlow installed successfully!\nTo run it as a background service (systemd), run:\nsudo $(which streamflow-app) --setup-service\n\" || true",
     "start": "electron .",
     "server": "node backend/server.js",
     "build": "electron-builder --win",
     "build:linux": "electron-builder --linux",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
+    "prepublishOnly": "npm run frontend:build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "build": {
@@ -45,6 +47,13 @@
           "from": "package/linux/streamflow.service",
           "to": "streamflow.service"
         }
+      ],
+      "files": [
+        "main.js",
+        "package.json",
+        "backend/**/*",
+        "frontend/dist/**/*",
+        "assets/**/*"
       ],
       "synopsis": "Seamless torrent streaming and media management."
     },

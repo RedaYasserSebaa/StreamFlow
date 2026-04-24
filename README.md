@@ -24,9 +24,15 @@ You can install Stream Flow using one of three methods:
 If you already have NodeJS installed, you can download and run the application entirely from the terminal:
 1. **Install globally:**
    ```bash
-   npm install -g streamflow-app
+   # Use sudo to ensure systemd setup is available
+   sudo npm install -g streamflow-app
    ```
-2. **Run:**
+2. **Setup as Service (Optional but Recommended):**
+   ```bash
+   sudo streamflow-app --setup-service
+   sudo systemctl start streamflow
+   ```
+3. **Run Manually:**
    ```bash
    streamflow-app
    ```
