@@ -1,6 +1,6 @@
 {
   "name": "streamflow-app",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "StreamFlow: A seamless torrent streaming and media management application.",
   "main": "main.js",
   "bin": {
