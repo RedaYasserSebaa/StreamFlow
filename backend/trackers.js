@@ -926,6 +926,7 @@ module.exports = [
   'udp://oh.fuuuuuck.com:6969/announce',
   'udp://open.4ever.tk:6969/announce',
   'udp://open.demonii.com:1337/announce',
+  'udp://open.dstud.io:6969/announce',
   'udp://open.free-tracker.ga:6969/announce',
   'udp://open.publictracker.xyz:6969/announce',
   'udp://open.stealth.si:80/announce',

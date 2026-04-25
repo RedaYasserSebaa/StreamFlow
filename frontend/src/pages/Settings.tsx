@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,7 +8,14 @@ import {
   RefreshCw, Trash2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { getBackendApi, changePassword, authorizeQuickConnectDevice, logoutUser } from '../api';
+import { 
+  getBackendApi, 
+  changePassword, 
+  authorizeQuickConnectDevice, 
+  logoutUser,
+  fetchUserSessions,
+  revokeSession
+} from '../api';
 import type { UserConfig } from '../types';
 
 const Settings = () => {
@@ -19,6 +26,50 @@ const Settings = () => {
 
   // Quick Connect State
   const [connectCode, setConnectCode] = useState('');
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [isFetchingSessions, setIsFetchingSessions] = useState(false);
+
+  const loadSessions = async () => {
+    if (!config?.backend_url || !user?.token) return;
+    setIsFetchingSessions(true);
+    try {
+      const res = await fetchUserSessions(config.backend_url, user.token);
+      if (res.success) {
+        setSessions(res.sessions);
+      }
+    } catch (err) {
+      console.error('Failed to fetch sessions:', err);
+    } finally {
+      setIsFetchingSessions(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    if (!config?.backend_url || !user?.token) return;
+    try {
+      const res = await revokeSession(config.backend_url, user.token, sessionId);
+      if (res.success) {
+        showToast('Device disconnected successfully', 'success');
+        loadSessions();
+      }
+    } catch (err) {
+      showToast('Failed to disconnect device', 'error');
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'quick') {
+      loadSessions();
+    }
+  }, []);
+
+  // Re-fetch when tab changes to quick
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    if (tab === 'quick') {
+      loadSessions();
+    }
+  };
 
   const handleAuthorizeDevice = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -254,7 +305,7 @@ const Settings = () => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group ${activeTab === tab.id ? 'bg-accent-primary text-white shadow-lg shadow-accent-primary/20' : 'text-muted hover:text-white hover:bg-white/5'}`}
             >
               <tab.icon size={18} className={activeTab === tab.id ? 'text-white' : 'text-accent-primary group-hover:scale-110 transition-transform'} />
@@ -858,6 +909,71 @@ const Settings = () => {
                     <p className="text-xs text-muted leading-relaxed">
                       Only authorize devices that you physically control. Authorizing a device gives it full access to your account, search history, and media library.
                     </p>
+                  </div>
+
+                  {/* Connected Devices List */}
+                  <div className="space-y-6 pt-8 border-t border-white/5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-bold flex items-center gap-2">
+                        <Laptop size={18} className="text-accent-primary" />
+                        Connected Devices
+                      </h3>
+                      <button 
+                        onClick={loadSessions}
+                        disabled={isFetchingSessions}
+                        className="p-2 hover:bg-white/5 rounded-lg transition-colors text-muted hover:text-white"
+                      >
+                        <RefreshCw size={14} className={isFetchingSessions ? 'animate-spin' : ''} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {isFetchingSessions && sessions.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-muted gap-3">
+                          <Loader2 size={24} className="animate-spin text-accent-primary" />
+                          <p className="text-xs font-bold uppercase tracking-widest">Loading sessions...</p>
+                        </div>
+                      ) : sessions.length === 0 ? (
+                        <div className="glass p-8 rounded-3xl border border-white/5 text-center space-y-2">
+                          <p className="text-sm text-muted font-medium">No other devices connected.</p>
+                          <p className="text-[10px] text-muted/60 uppercase tracking-widest font-black">Your current session is managed separately</p>
+                        </div>
+                      ) : (
+                        sessions.map((session) => (
+                          <div key={session.id} className="glass p-4 rounded-2xl border border-white/10 flex items-center justify-between group hover:border-accent-primary/30 transition-all">
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 rounded-xl bg-white/5 text-accent-primary group-hover:scale-110 transition-transform">
+                                <Smartphone size={20} />
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                  {session.deviceName}
+                                  {session.ip === '::1' || session.ip === '127.0.0.1' ? (
+                                    <span className="text-[8px] bg-accent-primary/20 text-accent-primary px-1.5 py-0.5 rounded-full uppercase font-black">Local</span>
+                                  ) : null}
+                                </h4>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <p className="text-[10px] text-muted flex items-center gap-1">
+                                    <Network size={10} /> {session.ip}
+                                  </p>
+                                  <span className="w-1 h-1 rounded-full bg-white/10" />
+                                  <p className="text-[10px] text-muted flex items-center gap-1">
+                                    <RefreshCw size={10} /> {new Date(session.lastActive).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleRevokeSession(session.id)}
+                              className="p-2.5 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-all"
+                              title="Disconnect Device"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>

@@ -55,7 +55,8 @@ const Setup = () => {
       const initQuickConnect = async () => {
         setIsLoading(true);
         try {
-          const res = await generateQuickConnectCode(formData.backend_url);
+          const deviceName = `${window.navigator.platform} (${window.navigator.appName})`;
+          const res = await generateQuickConnectCode(formData.backend_url, deviceName);
           if (res.success) {
             setQuickCode({ code: res.code, expiresAt: res.expiresAt });
           }

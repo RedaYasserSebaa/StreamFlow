@@ -98,15 +98,27 @@ export const changePassword = async (baseUrl: string, token: string, data: any) 
   return response.data;
 };
 
-export const generateQuickConnectCode = async (baseUrl: string) => {
+export const generateQuickConnectCode = async (baseUrl: string, deviceName?: string) => {
   const api = getBackendApi(baseUrl);
-  const response = await api.post('/api/auth/quick-connect/generate');
+  const response = await api.post('/api/auth/quick-connect/generate', { deviceName });
   return response.data;
 };
 
-export const authorizeQuickConnectDevice = async (baseUrl: string, token: string, code: string) => {
+export const authorizeQuickConnectDevice = async (baseUrl: string, token: string, code: string, deviceName?: string) => {
   const api = getBackendApi(baseUrl, token);
-  const response = await api.post('/api/auth/quick-connect/authorize', { code });
+  const response = await api.post('/api/auth/quick-connect/authorize', { code, deviceName });
+  return response.data;
+};
+
+export const fetchUserSessions = async (baseUrl: string, token: string) => {
+  const api = getBackendApi(baseUrl, token);
+  const response = await api.get('/api/user/sessions');
+  return response.data;
+};
+
+export const revokeSession = async (baseUrl: string, token: string, sessionId: string) => {
+  const api = getBackendApi(baseUrl, token);
+  const response = await api.delete(`/api/user/sessions/${sessionId}`);
   return response.data;
 };
 

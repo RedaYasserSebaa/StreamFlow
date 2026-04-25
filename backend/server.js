@@ -73,6 +73,10 @@ const JWT_SECRET = process.env.JWT_SECRET || "streamflow-super-secret-key-123";
 try {
   if (fs.existsSync(USERS_FILE)) {
     USERS = JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+    // Ensure all users have a sessions array
+    USERS.forEach(u => {
+      if (!u.sessions) u.sessions = [];
+    });
     console.log(`Loaded ${USERS.length} users from file`);
   }
 } catch (error) {
@@ -359,15 +363,20 @@ const authenticateToken = (req, res, next) => {
 
   if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, (err, decodedUser) => {
     if (err) return res.status(403).json({ error: "Forbidden" });
     
-    // Ensure the user actually exists in the database (handles server restarts/wipes)
-    if (!USERS.find(u => u.id === user.id)) {
+    const user = USERS.find(u => u.id === decodedUser.id);
+    if (!user) {
       return res.status(401).json({ error: "User session invalid or deleted" });
     }
+
+    // If the token has a sessionId, verify it exists in the user's sessions
+    if (decodedUser.sessionId && !user.sessions.some(s => s.id === decodedUser.sessionId)) {
+      return res.status(401).json({ error: "Session revoked or expired" });
+    }
     
-    req.user = user;
+    req.user = decodedUser;
     next();
   });
 };
@@ -430,7 +439,7 @@ app.get("/api/local", authenticateToken, async (req, res) => {
 
 // Auth Endpoints
 app.post("/api/auth/register", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: "Missing fields" });
 
   if (USERS.find(u => u.username === username)) {
@@ -458,7 +467,7 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 app.post("/api/auth/login", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password } = req.body || {};
   const user = USERS.find(u => u.username === username);
 
   if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -489,14 +498,26 @@ app.get("/api/auth/users", (req, res) => {
 });
 
 app.post("/api/auth/login-profile", (req, res) => {
-  const { id } = req.body;
+  const id = req.body?.id;
   const user = USERS.find(u => u.id === id);
 
   if (!user) {
     return res.status(404).json({ error: "User profile not found" });
   }
 
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+  const sessionId = Math.random().toString(36).substring(2, 15);
+  const session = {
+    id: sessionId,
+    deviceName: req.headers['user-agent'] || 'Unknown Device',
+    ip: req.ip,
+    lastActive: Date.now()
+  };
+
+  if (!user.sessions) user.sessions = [];
+  user.sessions.push(session);
+  saveUsers();
+
+  const token = jwt.sign({ id: user.id, username: user.username, sessionId }, JWT_SECRET);
   res.json({ 
     success: true, 
     token, 
@@ -510,7 +531,7 @@ app.post("/api/auth/login-profile", (req, res) => {
 });
 
 app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { currentPassword, newPassword } = req.body || {};
   if (!currentPassword || !newPassword) return res.status(400).json({ error: "Missing fields" });
 
   const user = USERS.find(u => u.id === req.user.id);
@@ -530,6 +551,7 @@ app.post("/api/auth/change-password", authenticateToken, async (req, res) => {
 
 // Quick Connect Endpoints
 app.post("/api/auth/quick-connect/generate", (req, res) => {
+  const deviceName = req.body?.deviceName || req.headers['user-agent'];
   // Generate a random 6-character alphanumeric code
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
   const expiresAt = Date.now() + 600000; // 10 minutes from now
@@ -539,6 +561,7 @@ app.post("/api/auth/quick-connect/generate", (req, res) => {
     userId: null,
     token: null,
     user: null,
+    deviceName: deviceName || 'Quick Connect Device',
     expiresAt 
   });
   
@@ -546,7 +569,7 @@ app.post("/api/auth/quick-connect/generate", (req, res) => {
 });
 
 app.post("/api/auth/quick-connect/authorize", authenticateToken, async (req, res) => {
-  const { code } = req.body;
+  const code = req.body?.code;
   if (!code) return res.status(400).json({ error: "Code is required" });
 
   const data = QUICK_CODES.get(code.toUpperCase());
@@ -558,7 +581,19 @@ app.post("/api/auth/quick-connect/authorize", authenticateToken, async (req, res
   if (!user) return res.status(404).json({ error: "User not found" });
 
   // Authorize the code
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+  const sessionId = Math.random().toString(36).substring(2, 15);
+  const session = {
+    id: sessionId,
+    deviceName: data.deviceName || 'Quick Connect Device',
+    ip: req.ip,
+    lastActive: Date.now()
+  };
+
+  if (!user.sessions) user.sessions = [];
+  user.sessions.push(session);
+  saveUsers();
+
+  const token = jwt.sign({ id: user.id, username: user.username, sessionId }, JWT_SECRET);
   QUICK_CODES.set(code.toUpperCase(), {
     ...data,
     status: 'authorized',
@@ -606,6 +641,24 @@ app.delete("/api/auth/delete-me", authenticateToken, (req, res) => {
   res.json({ success: true });
 });
 
+// Device Session Management
+app.get("/api/user/sessions", authenticateToken, (req, res) => {
+  const user = USERS.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+  
+  res.json({ success: true, sessions: user.sessions || [] });
+});
+
+app.delete("/api/user/sessions/:sessionId", authenticateToken, (req, res) => {
+  const user = USERS.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  user.sessions = (user.sessions || []).filter(s => s.id !== req.params.sessionId);
+  saveUsers();
+  
+  res.json({ success: true, message: "Session revoked" });
+});
+
 // User Data Sync Endpoints
 app.get("/api/user/data", authenticateToken, (req, res) => {
   const user = USERS.find(u => u.id === req.user.id);
@@ -622,7 +675,7 @@ app.post("/api/user/data", authenticateToken, (req, res) => {
   const userIndex = USERS.findIndex(u => u.id === req.user.id);
   if (userIndex === -1) return res.status(404).json({ error: "User not found" });
 
-  const { config, userLists, continueWatching } = req.body;
+  const { config, userLists, continueWatching } = req.body || {};
   
   if (config !== undefined) USERS[userIndex].config = config;
   if (userLists !== undefined) USERS[userIndex].userLists = userLists;
@@ -964,7 +1017,7 @@ app.post("/api/config", (req, res) => {
     backend_url,
     movies_path,
     tv_shows_path
-  } = req.body;
+  } = req.body || {};
 
   // Update config with provided values
   if (tmdb_api_key) CONFIG.tmdb_api_key = tmdb_api_key;
@@ -976,17 +1029,18 @@ app.post("/api/config", (req, res) => {
   if (tv_shows_path !== undefined) CONFIG.tv_shows_path = tv_shows_path;
   
   // expansion fields
-  if (req.body.auto_scan_interval !== undefined) CONFIG.auto_scan_interval = req.body.auto_scan_interval;
-  if (req.body.metadata_language) CONFIG.metadata_language = req.body.metadata_language;
-  if (req.body.accent_color) CONFIG.accent_color = req.body.accent_color;
-  if (req.body.glass_intensity !== undefined) CONFIG.glass_intensity = req.body.glass_intensity;
-  if (req.body.autoplay !== undefined) CONFIG.autoplay = req.body.autoplay;
-  if (req.body.seek_interval !== undefined) CONFIG.seek_interval = req.body.seek_interval;
-  if (req.body.default_language) CONFIG.default_language = req.body.default_language;
-  if (req.body.min_seeders !== undefined) CONFIG.min_seeders = req.body.min_seeders;
-  if (req.body.exclude_keywords !== undefined) CONFIG.exclude_keywords = req.body.exclude_keywords;
+  const body = req.body || {};
+  if (body.auto_scan_interval !== undefined) CONFIG.auto_scan_interval = body.auto_scan_interval;
+  if (body.metadata_language) CONFIG.metadata_language = body.metadata_language;
+  if (body.accent_color) CONFIG.accent_color = body.accent_color;
+  if (body.glass_intensity !== undefined) CONFIG.glass_intensity = body.glass_intensity;
+  if (body.autoplay !== undefined) CONFIG.autoplay = body.autoplay;
+  if (body.seek_interval !== undefined) CONFIG.seek_interval = body.seek_interval;
+  if (body.default_language) CONFIG.default_language = body.default_language;
+  if (body.min_seeders !== undefined) CONFIG.min_seeders = body.min_seeders;
+  if (body.exclude_keywords !== undefined) CONFIG.exclude_keywords = body.exclude_keywords;
 
-  if (req.body.hasOwnProperty('setup_complete')) CONFIG.setup_complete = req.body.setup_complete;
+  if (body.hasOwnProperty('setup_complete')) CONFIG.setup_complete = body.setup_complete;
 
   // Save configuration to file
   saveConfig();
@@ -1011,9 +1065,10 @@ app.post("/api/search", authenticateToken, async (req, res) => {
   const user = USERS.find(u => u.id === req.user.id);
   const userConfig = user?.config || CONFIG;
   
-  const { title, type, seasonEpi, year } = req.body;
+  const { title, type, seasonEpi, year } = req.body || {};
   const mediaType = type === 'tv' ? 'tv' : 'movie';
-  const searchTitle = title || req.body.movieTitle;
+  const movieTitle = req.body?.movieTitle;
+  const searchTitle = title || movieTitle;
 
   if (!searchTitle) {
     return res.status(400).json({ error: "Title is required" });
@@ -1233,7 +1288,7 @@ app.get("/api/stream/stats", (req, res) => {
 
 // Test Jackett Connection Endpoint
 app.post("/api/test-jackett", async (req, res) => {
-  const { jackett_ip, jackett_port, jackett_api_key } = req.body;
+  const { jackett_ip, jackett_port, jackett_api_key } = req.body || {};
 
   if (!jackett_ip || !jackett_port || !jackett_api_key) {
     return res.status(400).json({ 
