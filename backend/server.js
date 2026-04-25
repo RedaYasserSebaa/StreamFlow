@@ -120,6 +120,110 @@ let CONFIG = {
   exclude_keywords: ''
 };
 
+const TRACKER_LIST = [
+  'udp://tracker.opentrackr.org:1337/announce',
+  'http://tracker.opentrackr.org:1337/announce',
+  'udp://open.demonii.com:1337/announce',
+  'udp://open.stealth.si:80/announce',
+  'udp://tracker.torrent.eu.org:451/announce',
+  'udp://wepzone.net:6969/announce',
+  'udp://udp.tracker.projectk.org:23333/announce',
+  'udp://tracker.tvunderground.org.ru:3218/announce',
+  'udp://tracker.tryhackx.org:6969/announce',
+  'udp://tracker.srv00.com:6969/announce',
+  'udp://tracker.qu.ax:6969/announce',
+  'udp://tracker.playground.ru:6969/announce',
+  'udp://tracker.opentorrent.top:6969/announce',
+  'udp://tracker.ixuexi.click:6969/announce',
+  'udp://tracker.gmi.gd:6969/announce',
+  'udp://tracker.fnix.net:6969/announce',
+  'udp://tracker.flatuslifir.is:6969/announce',
+  'udp://tracker.ducks.party:1984/announce',
+  'udp://tracker.dler.org:6969/announce',
+  'udp://tracker.corpscorp.online:80/announce',
+  'udp://tracker.bluefrog.pw:2710/announce',
+  'udp://tracker.bittor.pw:1337/announce',
+  'udp://tracker.1h.is:1337/announce',
+  'udp://tracker.004430.xyz:1337/announce',
+  'udp://tracker-udp.gbitt.info:80/announce',
+  'udp://torrentclub.online:54123/announce',
+  'udp://t.overflow.biz:6969/announce',
+  'udp://seedpeer.net:6969/announce',
+  'udp://rekcart.duckdns.org:15480/announce',
+  'udp://martin-gebhardt.eu:25/announce',
+  'udp://leet-tracker.moe:1337/announce',
+  'udp://ipv4announce.sktorrent.eu:6969/announce',
+  'udp://evan.im:6969/announce',
+  'udp://bittorrent-tracker.e-n-c-r-y-p-t.net:1337/announce',
+  'udp://bandito.byterunner.io:6969/announce',
+  'udp://6ahddutb1ucc3cp.ru:6969/announce',
+  'https://tracker.zhuqiy.com:443/announce',
+  'https://tracker.yemekyedim.com:443/announce',
+  'https://tracker.pmman.tech:443/announce',
+  'https://tracker.nekomi.cn:443/announce',
+  'https://tracker.ghostchu-services.top:443/announce',
+  'https://tracker.gcrenwp.top:443/announce',
+  'https://tracker.cutie.dating:443/announce',
+  'https://tracker.bt4g.com:443/announce',
+  'https://tr.nyacat.pw:443/announce',
+  'https://shahidrazi.online:443/announce',
+  'https://pybittrack.retiolus.net:443/announce',
+  'https://cny.fan:443/announce',
+  'http://www.torrentsnipe.info:2701/announce',
+  'http://www.genesis-sp.org:2710/announce',
+  'http://tracker810.xyz:11450/announce',
+  'http://tracker2.dler.org:80/announce',
+  'http://tracker.zhuqiy.com:80/announce',
+  'http://tracker.xiaoduola.xyz:6969/announce',
+  'http://tracker.waaa.moe:6969/announce',
+  'http://tracker.vanitycore.co:6969/announce',
+  'http://tracker.tvunderground.org.ru:3218/announce',
+  'http://tracker.tritan.gg:8080/announce',
+  'http://tracker.sbsub.com:2710/announce',
+  'http://tracker.renfei.net:8080/announce',
+  'http://tracker.qu.ax:6969/announce',
+  'http://tracker.mywaifu.best:6969/announce',
+  'http://tracker.moxing.party:6969/announce',
+  'http://tracker.lintk.me:2710/announce',
+  'http://tracker.ipv6tracker.org:80/announce',
+  'http://tracker.ghostchu-services.top:80/announce',
+  'http://tracker.dmcomic.org:2710/announce',
+  'http://tracker.dler.org:6969/announce',
+  'http://tracker.dhitechnical.com:6969/announce',
+  'http://tracker.cutie.dating:80/announce',
+  'http://tracker.corpscorp.online:80/announce',
+  'http://tracker.bz:80/announce',
+  'http://tracker.bt4g.com:2095/announce',
+  'http://tracker.bt-hash.com:80/announce',
+  'http://tracker.bittor.pw:1337/announce',
+  'http://tr.nyacat.pw:80/announce',
+  'http://tr.kxmp.cf:80/announce',
+  'http://tr.highstar.shop:80/announce',
+  'http://t.overflow.biz:6969/announce',
+  'http://shubt.net:2710/announce',
+  'http://share.hkg-fansub.info:80/announce.php',
+  'http://seeders-paradise.org:80/announce',
+  'http://retracker.spark-rostov.ru:80/announce',
+  'http://open.trackerlist.xyz:80/announce',
+  'http://jvavav.com:80/announce',
+  'http://home.yxgz.club:6969/announce',
+  'http://bvarf.tracker.sh:2086/announce',
+  'http://buny.uk:6969/announce',
+  'http://bt1.xxxxbt.cc:6969/announce',
+  'http://bittorrent-tracker.e-n-c-r-y-p-t.net:1337/announce',
+  'http://aboutbeautifulgallopinghorsesinthegreenpasture.online:80/announce',
+  'http://1337.abcvg.info:80/announce',
+  'http://0d.kebhana.mx:443/announce',
+  'http://0123456789nonexistent.com:80/announce',
+  'http://004430.xyz:80/announce',
+  'udp://tracker.torrust-demo.com:6969/announce',
+  'udp://tracker.t-1.org:6969/announce',
+  'udp://tracker.ddunlimited.net:6969/announce',
+  'udp://ns575949.ip-51-222-82.net:6969/announce',
+  'https://t.213891.xyz:443/announce',
+  'http://tracker.dler.com:6969/announce'
+];
+
 // Load saved configuration
 try {
   if (fs.existsSync(CONFIG_FILE)) {
@@ -1079,19 +1183,11 @@ app.get("/api/stream", async (req, res) => {
   let engine = activeStreams.get(magnet);
   if (!engine) {
     const torrentOpts = {
-      connections: 500, // Max amount of peers to be connected to
-      uploads: 10,      // Limit uploads to preserve download bandwidth
-      dht: true,        // Whether or not to use DHT to initialize the swarm
+      connections: 500, // High connection limit to maximize swarm utilization
+      uploads: 10,      // Need sufficient uploads to satisfy BitTorrent tit-for-tat and unchoke fast peers
+      dht: true,
       tracker: true,
-      trackers: [
-        'udp://tracker.opentrackr.org:6969/announce',
-        'udp://tracker.internetwarriors.net:1337/announce',
-        'udp://tracker.openbittorrent.com:6969/announce',
-        'udp://tracker.zer0day.to:1337/announce',
-        'udp://tracker.leechers-paradise.org:6969/announce',
-        'udp://explodie.org:6969/announce',
-        'udp://tracker.coppersurfer.tk:6969/announce'
-      ]
+      trackers: TRACKER_LIST
     };
     engine = torrentStream(magnet, torrentOpts);
     activeStreams.set(magnet, engine);
@@ -1106,7 +1202,7 @@ app.get("/api/stream", async (req, res) => {
   }
 
   const file = engine.files.reduce((a, b) => a.length > b.length ? a : b);
-  file.select(); // Prioritize this file's pieces
+  file.select(); // Prioritize downloading the entire file to saturate bandwidth, stream will prioritize specific chunks
 
   const range = req.headers.range;
   if (range) {
@@ -1118,24 +1214,41 @@ app.get("/api/stream", async (req, res) => {
     const end = partialend ? parseInt(partialend, 10) : file.length - 1;
     const chunksize = (end - start) + 1;
 
+    const ext = path.extname(file.name).toLowerCase();
+    let contentType = 'video/mp4';
+    if (ext === '.mkv') contentType = 'video/x-matroska';
+    else if (ext === '.avi') contentType = 'video/x-msvideo';
+
     res.writeHead(206, {
       "Content-Range": `bytes ${start}-${end}/${file.length}`,
       "Accept-Ranges": "bytes",
       "Content-Length": chunksize,
-      "Content-Type": "video/mp4",
+      "Content-Type": contentType,
     });
 
     const stream = file.createReadStream({ start, end });
     stream.pipe(res);
     stream.on("error", (err) => console.log("Stream err:", err));
+    req.on("close", () => {
+      stream.destroy();
+    });
   } else {
+    const ext = path.extname(file.name).toLowerCase();
+    let contentType = 'video/mp4';
+    if (ext === '.mkv') contentType = 'video/x-matroska';
+    else if (ext === '.avi') contentType = 'video/x-msvideo';
+
     res.writeHead(200, {
       "Content-Length": file.length,
-      "Content-Type": "video/mp4",
+      "Content-Type": contentType,
     });
 
     const stream = file.createReadStream();
     stream.pipe(res);
+    stream.on("error", (err) => console.log("Stream err:", err));
+    req.on("close", () => {
+      stream.destroy();
+    });
   }
 });
 
@@ -1164,21 +1277,38 @@ app.get("/api/stream/local", (req, res) => {
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
     const chunksize = (end - start) + 1;
     const file = fs.createReadStream(filePath, { start, end });
+    const ext = path.extname(filePath).toLowerCase();
+    let contentType = 'video/mp4';
+    if (ext === '.mkv') contentType = 'video/x-matroska';
+    else if (ext === '.avi') contentType = 'video/x-msvideo';
+
     const head = {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
-      'Content-Type': 'video/mp4',
+      'Content-Type': contentType,
     };
     res.writeHead(206, head);
     file.pipe(res);
+    req.on("close", () => {
+      file.destroy();
+    });
   } else {
+    const ext = path.extname(filePath).toLowerCase();
+    let contentType = 'video/mp4';
+    if (ext === '.mkv') contentType = 'video/x-matroska';
+    else if (ext === '.avi') contentType = 'video/x-msvideo';
+
     const head = {
       'Content-Length': fileSize,
-      'Content-Type': 'video/mp4',
+      'Content-Type': contentType,
     };
     res.writeHead(200, head);
-    fs.createReadStream(filePath).pipe(res);
+    const file = fs.createReadStream(filePath);
+    file.pipe(res);
+    req.on("close", () => {
+      file.destroy();
+    });
   }
 });
 
