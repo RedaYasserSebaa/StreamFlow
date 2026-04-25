@@ -359,7 +359,12 @@ app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => {
 // Auth Middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  let token = authHeader && authHeader.split(' ')[1];
+  
+  // Also check query parameter for video players that don't support headers
+  if (!token && req.query.token) {
+    token = req.query.token;
+  }
 
   if (!token) return res.status(401).json({ error: "Unauthorized" });
 
@@ -371,9 +376,11 @@ const authenticateToken = (req, res, next) => {
       return res.status(401).json({ error: "User session invalid or deleted" });
     }
 
-    // If the token has a sessionId, verify it exists in the user's sessions
-    if (decodedUser.sessionId && !user.sessions.some(s => s.id === decodedUser.sessionId)) {
-      return res.status(401).json({ error: "Session revoked or expired" });
+    // Verify session integrity
+    const isValidSession = decodedUser.sessionId && user.sessions.some(s => s.id === decodedUser.sessionId);
+    
+    if (!isValidSession) {
+      return res.status(401).json({ error: "Session revoked, expired, or legacy token. Please log in again." });
     }
     
     req.user = decodedUser;
@@ -459,7 +466,18 @@ app.post("/api/auth/register", async (req, res) => {
     USERS.push(newUser);
     saveUsers();
 
-    const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET);
+    const sessionId = Math.random().toString(36).substring(2, 15);
+    const session = {
+      id: sessionId,
+      deviceName: req.headers['user-agent'] || 'New Account',
+      ip: req.ip,
+      lastActive: Date.now()
+    };
+    if (!newUser.sessions) newUser.sessions = [];
+    newUser.sessions.push(session);
+    saveUsers();
+
+    const token = jwt.sign({ id: newUser.id, username: newUser.username, sessionId }, JWT_SECRET);
     res.json({ success: true, token, user: { username: newUser.username, config: newUser.config } });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
@@ -474,7 +492,18 @@ app.post("/api/auth/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+  const sessionId = Math.random().toString(36).substring(2, 15);
+  const session = {
+    id: sessionId,
+    deviceName: req.headers['user-agent'] || 'Direct Login',
+    ip: req.ip,
+    lastActive: Date.now()
+  };
+  if (!user.sessions) user.sessions = [];
+  user.sessions.push(session);
+  saveUsers();
+
+  const token = jwt.sign({ id: user.id, username: user.username, sessionId }, JWT_SECRET);
   res.json({ 
     success: true, 
     token, 
@@ -1127,7 +1156,7 @@ app.post("/api/search", authenticateToken, async (req, res) => {
 // Stream Endpoint
 const activeStreams = new Map();
 
-app.get("/api/stream", async (req, res) => {
+app.get("/api/stream", authenticateToken, async (req, res) => {
   const { magnet } = req.query;
   if (!magnet) {
     return res.status(400).send("No magnet provided");
@@ -1206,7 +1235,7 @@ app.get("/api/stream", async (req, res) => {
 });
 
 // Local Stream Endpoint
-app.get("/api/stream/local", (req, res) => {
+app.get("/api/stream/local", authenticateToken, (req, res) => {
   const filePath = req.query.path;
   if (!filePath || !fs.existsSync(filePath)) {
     return res.status(404).send("File not found");
