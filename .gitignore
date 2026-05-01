@@ -4,6 +4,7 @@ node_modules/
 dist/
 dist-installer/
 build_installer.js
+artifacts
 
 # Electron / Packaging cache
 .builder-cache/
