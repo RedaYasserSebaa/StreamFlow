@@ -1036,6 +1036,67 @@ app.get("/api/status", async (req, res) => {
   res.json(status);
 });
 
+// Directory Browser Endpoint - Browse server directories for path selection
+app.get("/api/browse", authenticateToken, (req, res) => {
+  const requestedPath = req.query.path;
+
+  try {
+    let browsePath;
+
+    if (!requestedPath) {
+      // Default: return OS root(s)
+      if (process.platform === 'win32') {
+        // List available drive letters on Windows
+        const drives = [];
+        for (let i = 65; i <= 90; i++) {
+          const drive = String.fromCharCode(i) + ':\\';
+          try {
+            fs.accessSync(drive, fs.constants.R_OK);
+            drives.push({ name: drive, path: drive });
+          } catch {}
+        }
+        return res.json({ current: '', parent: null, directories: drives });
+      }
+      browsePath = '/';
+    } else {
+      browsePath = path.resolve(requestedPath);
+    }
+
+    if (!fs.existsSync(browsePath)) {
+      return res.status(404).json({ error: "Path not found" });
+    }
+    if (!fs.statSync(browsePath).isDirectory()) {
+      return res.status(400).json({ error: "Path is not a directory" });
+    }
+
+    const entries = fs.readdirSync(browsePath, { withFileTypes: true });
+    const directories = entries
+      .filter(e => {
+        if (!e.isDirectory()) return false;
+        // Skip hidden directories
+        if (e.name.startsWith('.')) return false;
+        // Check readability
+        try {
+          fs.accessSync(path.join(browsePath, e.name), fs.constants.R_OK);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .map(e => ({ name: e.name, path: path.join(browsePath, e.name) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const parentPath = path.dirname(browsePath);
+    res.json({
+      current: browsePath,
+      parent: parentPath !== browsePath ? parentPath : null,
+      directories
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Could not browse directory" });
+  }
+});
+
 // Configuration Endpoint - Set all configuration parameters
 app.post("/api/config", (req, res) => {
   const { 

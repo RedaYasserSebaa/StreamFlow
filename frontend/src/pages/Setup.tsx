@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Key, Server, CheckCircle, Network, ChevronRight, 
   AlertCircle, Loader2, User, Lock, UserPlus, LogIn, HardDrive,
-  Smartphone, Clock
+  Smartphone, Clock, FolderOpen
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { 
@@ -11,6 +11,7 @@ import {
   deleteCurrentUser, pollQuickConnectStatus, 
   generateQuickConnectCode, fetchProfiles, loginProfile
 } from '../api';
+import FolderPicker from '../components/common/FolderPicker';
 
 const Setup = () => {
   const { config, setConfig, login, logout, showToast, isAuthenticated, user } = useStore();
@@ -42,6 +43,7 @@ const Setup = () => {
     type: 'idle',
     message: ''
   });
+  const [folderPickerTarget, setFolderPickerTarget] = useState<'movies' | 'tv' | null>(null);
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -659,23 +661,41 @@ const Setup = () => {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase tracking-wider px-1">Movies Folder Path</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. C:\Videos\Movies"
-                      className={inputClasses}
-                      value={formData.movies_path}
-                      onChange={(e) => setFormData({...formData, movies_path: e.target.value})}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. C:\Videos\Movies"
+                        className={inputClasses}
+                        value={formData.movies_path}
+                        onChange={(e) => setFormData({...formData, movies_path: e.target.value})}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFolderPickerTarget('movies')}
+                        className="px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-muted hover:text-white hover:bg-white/10 transition-all shrink-0"
+                      >
+                        <FolderOpen size={16} />
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase tracking-wider px-1">TV Shows Folder Path</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. C:\Videos\TV Shows"
-                      className={inputClasses}
-                      value={formData.tv_shows_path}
-                      onChange={(e) => setFormData({...formData, tv_shows_path: e.target.value})}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. C:\Videos\TV Shows"
+                        className={inputClasses}
+                        value={formData.tv_shows_path}
+                        onChange={(e) => setFormData({...formData, tv_shows_path: e.target.value})}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFolderPickerTarget('tv')}
+                        className="px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-muted hover:text-white hover:bg-white/10 transition-all shrink-0"
+                      >
+                        <FolderOpen size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
@@ -708,6 +728,22 @@ const Setup = () => {
           )}
         </AnimatePresence>
       </motion.div>
+
+      <FolderPicker
+        isOpen={folderPickerTarget !== null}
+        onClose={() => setFolderPickerTarget(null)}
+        onSelect={(path) => {
+          if (folderPickerTarget === 'movies') {
+            setFormData({ ...formData, movies_path: path });
+          } else if (folderPickerTarget === 'tv') {
+            setFormData({ ...formData, tv_shows_path: path });
+          }
+        }}
+        initialPath={
+          folderPickerTarget === 'movies' ? formData.movies_path :
+          folderPickerTarget === 'tv' ? formData.tv_shows_path : undefined
+        }
+      />
     </div>
   );
 };
