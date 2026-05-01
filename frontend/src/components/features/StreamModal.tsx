@@ -92,9 +92,9 @@ const StreamModal = () => {
     let url = '';
     if (torrent.isLocal && torrent.magnet.startsWith('local://')) {
       const filePath = torrent.magnet.replace('local://', '');
-      url = `${config.backend_url}/api/stream/local?path=${encodeURIComponent(filePath)}`;
+      url = `${config.backend_url}/api/stream/local?path=${encodeURIComponent(filePath)}&token=${user?.token || ''}`;
     } else {
-      url = `${config.backend_url}/api/stream?magnet=${encodeURIComponent(torrent.magnet)}&indexer=${encodeURIComponent(torrent.indexer || '')}`;
+      url = `${config.backend_url}/api/stream?magnet=${encodeURIComponent(torrent.magnet)}&indexer=${encodeURIComponent(torrent.indexer || '')}&token=${user?.token || ''}`;
     }
 
     setStreamUrl(url);

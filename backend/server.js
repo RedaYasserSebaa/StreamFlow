@@ -345,7 +345,7 @@ app.use((req, res, next) => {
     "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; " +
     "img-src 'self' data: blob: https://image.tmdb.org https://api.themoviedb.org https://*.tile.openstreetmap.org; " +
     "media-src 'self' blob: http://localhost:7676 http://127.0.0.1:7676; " +
-    "connect-src 'self' http://localhost:7676 http://127.0.0.1:7676 ws://localhost:7676 https://api.themoviedb.org https://*.themoviedb.org;"
+    "connect-src 'self' http://localhost:7676 http://127.0.0.1:7676 ws://localhost:7676 https://api.themoviedb.org https://*.themoviedb.org https://cdn.plyr.io;"
   );
   next();
 });
@@ -1256,9 +1256,15 @@ app.get("/api/stream/local", authenticateToken, (req, res) => {
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const requestedEnd = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    
+    // Cap chunk size to 10MB to prevent memory bloat and buffering issues
+    const MAX_CHUNK_SIZE = 10 * 1024 * 1024;
+    const end = Math.min(requestedEnd, start + MAX_CHUNK_SIZE - 1);
+    
     const chunksize = (end - start) + 1;
-    const file = fs.createReadStream(filePath, { start, end });
+    // Increase highWaterMark to 5MB for smoother I/O reading
+    const file = fs.createReadStream(filePath, { start, end, highWaterMark: 5 * 1024 * 1024 });
     const ext = path.extname(filePath).toLowerCase();
     let contentType = 'video/mp4';
     if (ext === '.mkv') contentType = 'video/x-matroska';
@@ -1286,7 +1292,8 @@ app.get("/api/stream/local", authenticateToken, (req, res) => {
       'Content-Type': contentType,
     };
     res.writeHead(200, head);
-    const file = fs.createReadStream(filePath);
+    // Increase highWaterMark to 5MB for smoother I/O reading
+    const file = fs.createReadStream(filePath, { highWaterMark: 5 * 1024 * 1024 });
     file.pipe(res);
     req.on("close", () => {
       file.destroy();
