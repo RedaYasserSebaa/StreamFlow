@@ -9,6 +9,19 @@ const TRACKER_LIST = require("../trackers");
 
 const router = express.Router();
 
+// Helper: Detect audio codec from filename patterns
+function detectAudioCodec(filename) {
+  const lowerName = filename.toLowerCase();
+  // Common audio codec patterns in filenames
+  if (lowerName.includes('dts') || lowerName.includes('dts-hd')) return 'DTS/DTS-HD';
+  if (lowerName.includes('aac') || lowerName.includes('aac-lc')) return 'AAC';
+  if (lowerName.includes('opus') || lowerName.includes('opus-192')) return 'Opus';
+  if (lowerName.includes('flac') || lowerName.includes('flac-16')) return 'FLAC';
+  if (lowerName.includes('ac3') || lowerName.includes('5.1')) return 'AC3';
+  if (lowerName.includes('vorbis') || lowerName.includes('ogg')) return 'Vorbis';
+  return 'Unknown/Unspecified';
+}
+
 // Stream Endpoint
 router.get("/api/stream", authenticateToken, async (req, res) => {
   const { magnet } = req.query;
@@ -42,6 +55,9 @@ router.get("/api/stream", authenticateToken, async (req, res) => {
 
   const range = req.headers.range;
   const contentType = getContentType(file.name);
+  const audioCodec = detectAudioCodec(file.name);
+  
+  console.log(`[StreamFlow] Streaming file: ${file.name}, detected audio: ${audioCodec}`);
 
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
@@ -57,11 +73,18 @@ router.get("/api/stream", authenticateToken, async (req, res) => {
       "Accept-Ranges": "bytes",
       "Content-Length": chunksize,
       "Content-Type": contentType,
+      "X-Audio-Codec": audioCodec,
+      "X-Stream-File": file.name,
     });
 
     const stream = file.createReadStream({ start, end });
     stream.pipe(res);
-    stream.on("error", (err) => console.log("Stream err:", err));
+    stream.on("error", (err) => {
+      console.error(`[StreamFlow] Torrent stream error for ${file.name}: ${err.message}`);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Stream error', details: err.message });
+      }
+    });
     req.on("close", () => {
       stream.destroy();
     });
@@ -69,11 +92,18 @@ router.get("/api/stream", authenticateToken, async (req, res) => {
     res.writeHead(200, {
       "Content-Length": file.length,
       "Content-Type": contentType,
+      "X-Audio-Codec": audioCodec,
+      "X-Stream-File": file.name,
     });
 
     const stream = file.createReadStream();
     stream.pipe(res);
-    stream.on("error", (err) => console.log("Stream err:", err));
+    stream.on("error", (err) => {
+      console.error(`[StreamFlow] Torrent stream error for ${file.name}: ${err.message}`);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Stream error', details: err.message });
+      }
+    });
     req.on("close", () => {
       stream.destroy();
     });
@@ -99,6 +129,9 @@ router.get("/api/stream/local", authenticateToken, (req, res) => {
   const fileSize = stat.size;
   const range = req.headers.range;
   const contentType = getContentType(filePath);
+  const audioCodec = detectAudioCodec(filePath);
+
+  console.log(`[StreamFlow] Streaming local file: ${filePath}, detected audio: ${audioCodec}`);
 
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
@@ -118,6 +151,8 @@ router.get("/api/stream/local", authenticateToken, (req, res) => {
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
       'Content-Type': contentType,
+      'X-Audio-Codec': audioCodec,
+      'X-Stream-File': path.basename(filePath),
     };
     res.writeHead(206, head);
     file.pipe(res);
@@ -128,6 +163,8 @@ router.get("/api/stream/local", authenticateToken, (req, res) => {
     const head = {
       'Content-Length': fileSize,
       'Content-Type': contentType,
+      'X-Audio-Codec': audioCodec,
+      'X-Stream-File': path.basename(filePath),
     };
     res.writeHead(200, head);
     // Increase highWaterMark to 5MB for smoother I/O reading
@@ -148,7 +185,7 @@ router.get("/api/stream/stats", (req, res) => {
 
   const engine = activeStreams.get(magnet);
   if (!engine || !engine.swarm) {
-    return res.json({ speed: 0, peers: 0, downloaded: 0, progress: 0 });
+    return res.json({ speed: 0, peers: 0, downloaded: 0, progress: 0, audioAvailable: false });
   }
 
   const speed = typeof engine.swarm.downloadSpeed === 'function' ? engine.swarm.downloadSpeed() : 0;
@@ -156,8 +193,19 @@ router.get("/api/stream/stats", (req, res) => {
   const downloaded = engine.swarm.downloaded || 0;
   const total = engine.torrent ? engine.torrent.length : 0;
   const progress = total > 0 ? ((downloaded / total) * 100).toFixed(2) : 0;
+  
+  // Get the largest file (likely the video)
+  const largestFile = engine.files ? engine.files.reduce((a, b) => a.length > b.length ? a : b) : null;
+  const audioCodec = largestFile ? detectAudioCodec(largestFile.name) : 'Unknown';
 
-  res.json({ speed, peers, downloaded, progress });
+  res.json({ 
+    speed, 
+    peers, 
+    downloaded, 
+    progress,
+    audioCodec,
+    audioAvailable: audioCodec !== 'Unknown/Unspecified'
+  });
 });
 
 module.exports = router;

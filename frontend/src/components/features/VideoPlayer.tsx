@@ -34,11 +34,42 @@ const VideoPlayer = ({ src, poster, onPlaying, onWaiting, onEnded, seekInterval,
       });
 
       const video = videoRef.current;
+      
+      // Audio track detection and diagnostics
+      const handleLoadedMetadata = () => {
+        const audioTracks = (video as any).audioTracks;
+        if (audioTracks) {
+          console.log(`[StreamFlow] Audio tracks detected: ${audioTracks.length}`);
+          for (let i = 0; i < audioTracks.length; i++) {
+            const track = audioTracks[i];
+            console.log(`[StreamFlow] Audio track ${i}: label="${track.label}", language="${track.language}", kind="${track.kind}"`);
+            if (i === 0) {
+              track.enabled = true;
+              console.log(`[StreamFlow] Selected audio track 0 (default)`);
+            }
+          }
+        }
+      };
+
+      // Error handler for audio decode failures
+      const handleError = () => {
+        if (video.error) {
+          console.error(`[StreamFlow] Video error - Code: ${video.error.code}, Message: ${video.error.message}`);
+          if (video.error.code === 4) {
+            console.error('[StreamFlow] Audio codec may be unsupported or audio stream is corrupted');
+          }
+        }
+      };
+
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      video.addEventListener('error', handleError);
       video.addEventListener('playing', () => onPlaying?.());
       video.addEventListener('waiting', () => onWaiting?.());
       video.addEventListener('ended', () => onEnded?.());
 
       return () => {
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        video.removeEventListener('error', handleError);
         playerRef.current?.destroy();
       };
     }
@@ -47,8 +78,11 @@ const VideoPlayer = ({ src, poster, onPlaying, onWaiting, onEnded, seekInterval,
   // Handle src changes
   useEffect(() => {
     if (videoRef.current && src) {
+      console.log(`[StreamFlow] Loading video source: ${src}`);
       videoRef.current.src = src;
-      videoRef.current.play().catch(() => console.log('Autoplay prevented'));
+      videoRef.current.play().catch((err) => {
+        console.log(`[StreamFlow] Autoplay prevented or failed: ${err.message}`);
+      });
     }
   }, [src]);
 
