@@ -8,8 +8,8 @@ interface AppState {
   setConfig: (config: UserConfig) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  currentView: 'home' | 'discover' | 'lists' | 'settings' | 'offline';
-  setCurrentView: (view: 'home' | 'discover' | 'lists' | 'settings' | 'offline') => void;
+  currentView: 'home' | 'discover' | 'lists' | 'settings';
+  setCurrentView: (view: 'home' | 'discover' | 'lists' | 'settings') => void;
   userLists: Record<string, Movie[]>;
   setUserLists: (lists: Record<string, Movie[]>) => void;
   addToList: (listName: string, movie: Movie) => void;

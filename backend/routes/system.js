@@ -64,9 +64,7 @@ router.post("/api/config", (req, res) => {
     jackett_api_key, 
     jackett_ip, 
     jackett_port,
-    backend_url,
-    movies_path,
-    tv_shows_path
+    backend_url
   } = req.body || {};
 
   // Update config with provided values
@@ -75,12 +73,9 @@ router.post("/api/config", (req, res) => {
   if (jackett_ip) CONFIG.jackett_ip = jackett_ip;
   if (jackett_port) CONFIG.jackett_port = jackett_port;
   if (backend_url) CONFIG.backend_url = backend_url;
-  if (movies_path !== undefined) CONFIG.movies_path = movies_path;
-  if (tv_shows_path !== undefined) CONFIG.tv_shows_path = tv_shows_path;
   
   // expansion fields
   const body = req.body || {};
-  if (body.auto_scan_interval !== undefined) CONFIG.auto_scan_interval = body.auto_scan_interval;
   if (body.metadata_language) CONFIG.metadata_language = body.metadata_language;
   if (body.accent_color) CONFIG.accent_color = body.accent_color;
   if (body.glass_intensity !== undefined) CONFIG.glass_intensity = body.glass_intensity;
@@ -103,8 +98,6 @@ router.post("/api/config", (req, res) => {
       jackett_api_key: CONFIG.jackett_api_key ? "***configured***" : "Not set",
       jackett_ip: CONFIG.jackett_ip,
       jackett_port: CONFIG.jackett_port,
-      movies_path: CONFIG.movies_path,
-      tv_shows_path: CONFIG.tv_shows_path,
       setup_complete: CONFIG.setup_complete,
     },
   });

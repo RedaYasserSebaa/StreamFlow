@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, PlayCircle } from 'lucide-react';
+import { Star, Search } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import type { Movie } from '../../types';
 import { getImagePath } from '../../api';
@@ -37,7 +37,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onClick }) => {
         
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <PlayCircle size={48} className="text-accent-primary drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+          <Search size={48} className="text-accent-primary drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
         </div>
 
         {/* Rating Badge */}

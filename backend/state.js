@@ -23,9 +23,6 @@ setInterval(() => {
 // Active torrent stream engines (magnet -> engine)
 const activeStreams = new Map();
 
-// In-memory cache for local media metadata (keyed by userId)
-const localMediaCache = new Map();
-
 module.exports = {
   // Re-export from config for convenience
   CONFIG,
@@ -39,5 +36,4 @@ module.exports = {
   // State singletons
   QUICK_CODES,
   activeStreams,
-  localMediaCache,
 };

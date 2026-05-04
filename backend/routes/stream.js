@@ -110,71 +110,7 @@ router.get("/api/stream", authenticateToken, async (req, res) => {
   }
 });
 
-// Local Stream Endpoint
-router.get("/api/stream/local", authenticateToken, (req, res) => {
-  const filePath = req.query.path;
-  if (!filePath || !fs.existsSync(filePath)) {
-    return res.status(404).send("File not found");
-  }
 
-  // Security check: path must be within movies_path or tv_shows_path
-  const isAllowed = (CONFIG.movies_path && filePath.startsWith(path.resolve(CONFIG.movies_path))) ||
-                    (CONFIG.tv_shows_path && filePath.startsWith(path.resolve(CONFIG.tv_shows_path)));
-  
-  if (!isAllowed) {
-    return res.status(403).send("Access denied");
-  }
-
-  const stat = fs.statSync(filePath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
-  const contentType = getContentType(filePath);
-  const audioCodec = detectAudioCodec(filePath);
-
-  console.log(`[StreamFlow] Streaming local file: ${filePath}, detected audio: ${audioCodec}`);
-
-  if (range) {
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const requestedEnd = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    
-    // Cap chunk size to 10MB to prevent memory bloat and buffering issues
-    const MAX_CHUNK_SIZE = 10 * 1024 * 1024;
-    const end = Math.min(requestedEnd, start + MAX_CHUNK_SIZE - 1);
-    
-    const chunksize = (end - start) + 1;
-    // Increase highWaterMark to 5MB for smoother I/O reading
-    const file = fs.createReadStream(filePath, { start, end, highWaterMark: 5 * 1024 * 1024 });
-
-    const head = {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunksize,
-      'Content-Type': contentType,
-      'X-Audio-Codec': audioCodec,
-      'X-Stream-File': path.basename(filePath),
-    };
-    res.writeHead(206, head);
-    file.pipe(res);
-    req.on("close", () => {
-      file.destroy();
-    });
-  } else {
-    const head = {
-      'Content-Length': fileSize,
-      'Content-Type': contentType,
-      'X-Audio-Codec': audioCodec,
-      'X-Stream-File': path.basename(filePath),
-    };
-    res.writeHead(200, head);
-    // Increase highWaterMark to 5MB for smoother I/O reading
-    const file = fs.createReadStream(filePath, { highWaterMark: 5 * 1024 * 1024 });
-    file.pipe(res);
-    req.on("close", () => {
-      file.destroy();
-    });
-  }
-});
 
 // Stream Stats Endpoint
 router.get("/api/stream/stats", (req, res) => {

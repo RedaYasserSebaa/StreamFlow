@@ -15,11 +15,8 @@ let CONFIG = {
   jackett_ip: process.env.JACKETT_IP || "localhost",
   jackett_port: parseInt(process.env.JACKETT_PORT) || 9117,
   backend_url: process.env.BACKEND_URL || "http://localhost:7676",
-  movies_path: process.env.MOVIES_PATH || null,
-  tv_shows_path: process.env.TV_SHOWS_PATH || null,
   
   // expansion fields
-  auto_scan_interval: 24,
   metadata_language: 'en-US',
   accent_color: '#3b82f6',
   glass_intensity: 12,

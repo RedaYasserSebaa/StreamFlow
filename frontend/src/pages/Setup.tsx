@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, Key, Server, CheckCircle, Network, ChevronRight, 
-  AlertCircle, Loader2, User, Lock, UserPlus, LogIn, HardDrive,
-  Smartphone, Clock, FolderOpen
+  Search, Key, Server, CheckCircle, Network, ChevronRight,
+  AlertCircle, Loader2, User, Lock, UserPlus, LogIn,
+  Smartphone, Clock
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { 
@@ -11,7 +11,6 @@ import {
   deleteCurrentUser, pollQuickConnectStatus, 
   generateQuickConnectCode, fetchProfiles, loginProfile
 } from '../api';
-import FolderPicker from '../components/common/FolderPicker';
 
 const Setup = () => {
   const { config, setConfig, login, logout, showToast, isAuthenticated, user } = useStore();
@@ -34,8 +33,6 @@ const Setup = () => {
     jackett_port: config?.jackett_port || 9117,
     backend_url: config?.backend_url || window.location.origin,
     subtitle_api_key: config?.subtitle_api_key || '',
-    movies_path: config?.movies_path || '',
-    tv_shows_path: config?.tv_shows_path || '',
     setup_complete: config?.setup_complete || false
   });
 
@@ -43,7 +40,6 @@ const Setup = () => {
     type: 'idle',
     message: ''
   });
-  const [folderPickerTarget, setFolderPickerTarget] = useState<'movies' | 'tv' | null>(null);
 
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -225,7 +221,7 @@ const Setup = () => {
       
       const configToSave = {
         ...formData,
-        setup_complete: step === 3
+        setup_complete: true
       };
 
       // Update global config
@@ -239,12 +235,7 @@ const Setup = () => {
       }
 
       setConfig(configToSave);
-      
-      if (step === 2) {
-        setStep(3);
-      } else {
-        showToast('Configuration saved successfully!', 'success');
-      }
+      showToast('Configuration saved successfully!', 'success');
     } catch (err) {
       showToast('Failed to save configuration', 'error');
     } finally {
@@ -268,14 +259,12 @@ const Setup = () => {
             <img src="/favicon.png" alt="Logo" className="w-16 h-16 mx-auto drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
           </div>
           <h1 className="text-3xl font-bold">
-            {step === 1 ? 'Welcome to StreamFlow' : step === 2 ? 'Service Configuration' : 'Local Media Setup'}
+            {step === 1 ? 'Welcome to StreamFlow' : 'Service Configuration'}
           </h1>
           <p className="text-muted mt-2">
             {step === 1 
               ? (authMode === 'signup' ? 'Create an account to get started' : 'Login to your existing account')
-              : step === 2 
-                ? 'Configure your API keys and media services'
-                : 'Connect your local movie and TV show folders'}
+              : 'Configure your API keys and media services'}
           </p>
         </div>
 
@@ -284,7 +273,6 @@ const Setup = () => {
           <div className="flex items-center justify-center gap-2 mb-10">
             <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 1 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
             <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 2 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
-            <div className={`h-1.5 w-12 rounded-full transition-all duration-500 ${step >= 3 ? 'bg-accent-primary' : 'bg-white/10'}`}></div>
           </div>
         )}
 
@@ -492,7 +480,7 @@ const Setup = () => {
                 </form>
               )}
             </motion.div>
-          ) : step === 2 ? (
+          ) : (
             <motion.form 
               key="config-step"
               initial={{ x: -20, opacity: 0 }}
@@ -638,88 +626,6 @@ const Setup = () => {
                   disabled={isLoading}
                   className="flex-[2] bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isLoading ? <Loader2 size={20} className="animate-spin" /> : <ChevronRight size={20} />}
-                  Next Step
-                </button>
-              </div>
-            </motion.form>
-          ) : (
-            <motion.form 
-              key="local-media-step"
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 20, opacity: 0 }}
-              onSubmit={handleConfigSubmit} 
-              className="space-y-8"
-            >
-              <section className="space-y-6">
-                <div className="flex items-center gap-2 text-accent-secondary font-semibold text-sm">
-                  <HardDrive size={18} className="text-accent-secondary" />
-                  LOCAL LIBRARIES
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-wider px-1">Movies Folder Path</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="e.g. C:\Videos\Movies"
-                        className={inputClasses}
-                        value={formData.movies_path}
-                        onChange={(e) => setFormData({...formData, movies_path: e.target.value})}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setFolderPickerTarget('movies')}
-                        className="px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-muted hover:text-white hover:bg-white/10 transition-all shrink-0"
-                      >
-                        <FolderOpen size={16} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-wider px-1">TV Shows Folder Path</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="e.g. C:\Videos\TV Shows"
-                        className={inputClasses}
-                        value={formData.tv_shows_path}
-                        onChange={(e) => setFormData({...formData, tv_shows_path: e.target.value})}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setFolderPickerTarget('tv')}
-                        className="px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-muted hover:text-white hover:bg-white/10 transition-all shrink-0"
-                      >
-                        <FolderOpen size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2 text-xs text-muted leading-relaxed">
-                  <p className="flex items-center gap-2 font-bold text-white/50">
-                    <AlertCircle size={14} /> HOW IT WORKS
-                  </p>
-                  <p>StreamFlow will scan these folders when you open a movie or show. If a matching file is found, it will appear as the first option in the stream modal.</p>
-                </div>
-              </section>
-
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="flex-1 px-6 py-4 rounded-2xl bg-surface border border-white/10 text-sm font-bold text-muted hover:text-white transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-[2] bg-gradient-premium hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
                   {isLoading ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
                   Complete Setup
                 </button>
@@ -728,22 +634,6 @@ const Setup = () => {
           )}
         </AnimatePresence>
       </motion.div>
-
-      <FolderPicker
-        isOpen={folderPickerTarget !== null}
-        onClose={() => setFolderPickerTarget(null)}
-        onSelect={(path) => {
-          if (folderPickerTarget === 'movies') {
-            setFormData({ ...formData, movies_path: path });
-          } else if (folderPickerTarget === 'tv') {
-            setFormData({ ...formData, tv_shows_path: path });
-          }
-        }}
-        initialPath={
-          folderPickerTarget === 'movies' ? formData.movies_path :
-          folderPickerTarget === 'tv' ? formData.tv_shows_path : undefined
-        }
-      />
     </div>
   );
 };

@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Lock, Key, Search, HardDrive, Save,
+  Lock, Key, Search, Save,
   CheckCircle, Loader2, Network, ShieldCheck,
-  ChevronRight, Laptop, FolderOpen, Database, Zap, Smartphone,
+  ChevronRight, Laptop, Database, Zap, Smartphone,
   RefreshCw, Trash2
 } from 'lucide-react';
+import type { UserConfig } from '../types';
 import { useStore } from '../store/useStore';
 import { 
   getBackendApi, 
@@ -16,15 +17,11 @@ import {
   fetchUserSessions,
   revokeSession
 } from '../api';
-import type { UserConfig } from '../types';
-import FolderPicker from '../components/common/FolderPicker';
 
 const Settings = () => {
   const { config, setConfig, user, showToast } = useStore();
-  const [activeTab, setActiveTab] = useState<'quick' | 'security' | 'services' | 'library' | 'player' | 'tuning'>('quick');
+  const [activeTab, setActiveTab] = useState<'quick' | 'security' | 'services' | 'player' | 'tuning'>('quick');
   const [isLoading, setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [folderPickerTarget, setFolderPickerTarget] = useState<'movies' | 'tv' | null>(null);
 
   // Quick Connect State
   const [connectCode, setConnectCode] = useState('');
@@ -109,12 +106,9 @@ const Settings = () => {
     jackett_port: config?.jackett_port || 9117,
     backend_url: config?.backend_url || window.location.origin,
     subtitle_api_key: config?.subtitle_api_key || '',
-    movies_path: config?.movies_path || '',
-    tv_shows_path: config?.tv_shows_path || '',
     setup_complete: config?.setup_complete || true,
     avatar: config?.avatar || '',
     
-    auto_scan_interval: config?.auto_scan_interval || 24,
     metadata_language: config?.metadata_language || 'en-US',
     accent_color: config?.accent_color || '#3b82f6',
     glass_intensity: config?.glass_intensity || 12,
@@ -219,21 +213,7 @@ const Settings = () => {
     }
   };
 
-  const handleRefreshScan = async () => {
-    if (!config?.backend_url || !user?.token) return;
-    
-    setIsRefreshing(true);
-    try {
-      await axios.get(`${config.backend_url}/api/local?refresh=true`, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-      showToast('Media library refresh complete!', 'success');
-    } catch (err) {
-      showToast('Failed to refresh local media', 'error');
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -272,7 +252,7 @@ const Settings = () => {
         ctx?.drawImage(img, 0, 0, width, height);
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        setFormData(f => ({ ...f, avatar: dataUrl }));
+        setFormData((f: UserConfig) => ({ ...f, avatar: dataUrl }));
       };
       img.src = event.target?.result as string;
     };
@@ -286,7 +266,6 @@ const Settings = () => {
     { id: 'quick', label: 'Quick Connect', icon: Smartphone },
     { id: 'security', label: 'User Security', icon: ShieldCheck },
     { id: 'services', label: 'Media Services', icon: Laptop },
-    { id: 'library', label: 'Local Library', icon: FolderOpen },
     { id: 'player', label: 'Interface & Player', icon: Zap },
     { id: 'tuning', label: 'Search Tuning', icon: Search },
   ] as const;
@@ -545,104 +524,7 @@ const Settings = () => {
               </motion.div>
             )}
 
-            {activeTab === 'library' && (
-              <motion.div
-                key="library"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="space-y-8"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-4 rounded-2xl bg-accent-secondary/10 border border-accent-secondary/20">
-                    <FolderOpen className="text-accent-secondary" size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-black text-white">Local Library Paths</h2>
-                    <p className="text-sm text-muted">Point StreamFlow to your stored media collections</p>
-                  </div>
-                </div>
 
-                <form onSubmit={handleConfigSave} className="space-y-6 max-w-2xl">
-                  <div className="glass p-8 rounded-3xl border border-white/10 space-y-6">
-                    <div className="space-y-2">
-                      <label className={labelClasses}><HardDrive size={14} className="text-accent-secondary" /> Movies Folder Path</label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          placeholder="e.g. C:\MyMedia\Movies"
-                          className={inputClasses}
-                          value={formData.movies_path}
-                          onChange={(e) => setFormData({...formData, movies_path: e.target.value})}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setFolderPickerTarget('movies')}
-                          className="px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-muted hover:text-white hover:bg-white/10 transition-all shrink-0"
-                        >
-                          <FolderOpen size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className={labelClasses}><HardDrive size={14} className="text-accent-secondary" /> TV Shows Folder Path</label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          placeholder="e.g. C:\MyMedia\TV"
-                          className={inputClasses}
-                          value={formData.tv_shows_path}
-                          onChange={(e) => setFormData({...formData, tv_shows_path: e.target.value})}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setFolderPickerTarget('tv')}
-                          className="px-4 rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-muted hover:text-white hover:bg-white/10 transition-all shrink-0"
-                        >
-                          <FolderOpen size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 pt-4 border-t border-white/5">
-                      <label className={labelClasses}>Auto-Scan Interval</label>
-                      <select 
-                        className="premium-select"
-                        value={formData.auto_scan_interval}
-                        onChange={(e) => setFormData({...formData, auto_scan_interval: parseInt(e.target.value)})}
-                      >
-                        <option value={1}>Every 1 Hour</option>
-                        <option value={6}>Every 6 Hours</option>
-                        <option value={12}>Every 12 Hours</option>
-                        <option value={24}>Every 24 Hours</option>
-                        <option value={0}>Disabled (Manual Only)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-4">
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-premium text-white text-sm font-black hover:shadow-lg hover:shadow-accent-primary/30 transition-all disabled:opacity-50"
-                    >
-                      {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                      Save Library Paths
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleRefreshScan}
-                      disabled={isRefreshing}
-                      className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-black hover:bg-white/10 transition-all disabled:opacity-50"
-                    >
-                      {isRefreshing ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
-                      Refresh Scan
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            )}
 
             {activeTab === 'player' && (
               <motion.div
@@ -692,7 +574,7 @@ const Settings = () => {
                           {formData.avatar && (
                             <button
                               type="button"
-                              onClick={() => setFormData(f => ({ ...f, avatar: '' }))}
+                              onClick={() => setFormData((f: UserConfig) => ({ ...f, avatar: '' }))}
                               className="text-[10px] text-accent-danger hover:underline font-bold block"
                             >
                               Remove Avatar
@@ -1002,21 +884,6 @@ const Settings = () => {
         </div>
       </main>
 
-      <FolderPicker
-        isOpen={folderPickerTarget !== null}
-        onClose={() => setFolderPickerTarget(null)}
-        onSelect={(path) => {
-          if (folderPickerTarget === 'movies') {
-            setFormData({ ...formData, movies_path: path });
-          } else if (folderPickerTarget === 'tv') {
-            setFormData({ ...formData, tv_shows_path: path });
-          }
-        }}
-        initialPath={
-          folderPickerTarget === 'movies' ? formData.movies_path :
-          folderPickerTarget === 'tv' ? formData.tv_shows_path : undefined
-        }
-      />
     </div>
   );
 };

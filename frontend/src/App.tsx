@@ -4,7 +4,6 @@ import Setup from './pages/Setup';
 import Discover from './pages/Discover';
 import MyLists from './pages/MyLists';
 import Settings from './pages/Settings';
-import OfflineMode from './pages/OfflineMode';
 import SearchResults from './pages/SearchResults';
 import MainLayout from './layout/MainLayout';
 import { useStore } from './store/useStore';
@@ -45,8 +44,6 @@ function App() {
         return <MyLists />;
       case 'settings':
         return <Settings />;
-      case 'offline':
-        return <OfflineMode />;
       default:
         return <Home />;
     }
