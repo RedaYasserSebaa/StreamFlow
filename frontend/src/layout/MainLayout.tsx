@@ -26,7 +26,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               >
                 StreamFlow
               </motion.h1>
-              <p className="text-muted text-sm mt-2">Discover and stream your favorite content instantly.</p>
+              <p className="text-muted text-sm mt-2">Discover and download your favorite content instantly.</p>
             </div>
 
             <div className="relative w-full md:w-96 group">
@@ -54,10 +54,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </AnimatePresence>
         </div>
       </main>
-
-      <AnimatePresence>
-        {selectedMovie && <StreamModal />}
-      </AnimatePresence>
 
       <AnimatePresence>
         {selectedMovie && <StreamModal />}

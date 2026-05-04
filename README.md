@@ -4,10 +4,26 @@
 
 # Stream Flow
 
-Welcome to **Stream Flow**, a standalone application that integrates movie and TV show discovery with automated torrent searching and **direct browser-based media streaming**. This app bypasses the need for manual downloads and provides a beautiful UI for your own torrent streams!
+Welcome to **Stream Flow**, a specialized **magnet link discovery and download utility**. This application integrates movie and TV show discovery with high-performance torrent searching, allowing you to quickly find magnets and launch them in your preferred system torrent client.
 
-> [!WARNING]
-> **Under Development:** Stream Flow is currently in active development. You may encounter bugs, performance issues, or incomplete features. Your feedback and contributions are appreciated!
+> [!NOTE]
+> **Magnet Focused:** This application is strictly for magnet discovery. Media playback is handled by your system's default media player and torrent applications.
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="assets/screenshot2.png" alt="Home Screen" width="800" />
+  <br />
+  <em>Discovery and Trending Home Screen</em>
+</p>
+
+<p align="center">
+  <img src="assets/screenshot1.png" alt="Search Screen" width="800" />
+  <br />
+  <em>Advanced Magnet Search & Filtering</em>
+</p>
 
 ---
 
@@ -23,13 +39,13 @@ For server administrators, NAS setups, or Linux users, Docker is the fastest and
      --name streamflow \
      redayasser/streamflow:latest
    ```
-   > **Note:** The `-v streamflow_data:/app/data` volume is used to persist your settings, user accounts, and is the recommended location for your media library (movies and series). You can replace `streamflow_data` with a local path on your machine (e.g., `-v /path/to/your/media:/app/data`) to directly use your existing Movies and TV Shows files.
+   > **Note:** The `-v streamflow_data:/app/data` volume is used to persist your settings, user accounts, and search configurations.
 2. **Access:** Open `http://localhost:7676` in your browser.
 
 ### Method 2: Using the Windows Installer
 1. **Download:** Go to the **Releases** tab on this GitHub repository and download the latest `StreamFlow Setup.exe`.
 2. **Install:** Double-click the file to install the application.
-3. **Run:** Once installed, Stream Flow runs as a lightweight background server and will automatically open the streaming UI in your default web browser.
+3. **Run:** Once installed, Stream Flow runs as a lightweight background server and will automatically open the discovery UI in your default web browser.
 
 ### Initial Setup Requirements
 When you first launch the app, you will be directed to a setup page that requires two external services:
